@@ -1,52 +1,18 @@
 using System;
-using System.Buffers;
 using SuperSocket.ProtoBase;
-using SuperSocket.MySQL.PackagePartReader;
 
 namespace SuperSocket.MySQL
 {
-    public class QueryResultFilter : IPipelineFilter<QueryResult>
+    public class QueryResultFilter : PackagePartsPipelineFilter<QueryResult>
     {
-        public IPackageDecoder<QueryResult> Decoder { get; set; } 
-
-        public IPipelineFilter<QueryResult> NextFilter => null;
-
-        private IPackagePartReader _currentPartReader;
-
-        private QueryResult _currentPackage;
-
-        public QueryResult Filter(ref SequenceReader<byte> reader)
+        protected override QueryResult CreatePackage()
         {
-            var package = _currentPackage;
-
-            if (package == null)
-            {
-                package = _currentPackage = new QueryResult();
-                _currentPartReader = PackagePartReader.PackagePartReader.NewReader;
-            }
-
-            while (true)
-            {
-                if (_currentPartReader.Process(package, ref reader, out IPackagePartReader nextPartReader, out bool needMoreData))
-                {
-                    Reset();
-                    return package;
-                }
-
-                if (nextPartReader != null)
-                    _currentPartReader = nextPartReader;
-
-                if (needMoreData || reader.Remaining <= 0)
-                    return null;
-            }
+            return new QueryResult();
         }
 
-        public void Reset()
+        protected override IPackagePartReader<QueryResult> GetFirstPartReader()
         {
-            _currentPackage = null;
-            _currentPartReader = null;
+            return PackagePartReader.PackagePartReader.NewReader;
         }
-
-        public object Context { get; set; }
     }
 }

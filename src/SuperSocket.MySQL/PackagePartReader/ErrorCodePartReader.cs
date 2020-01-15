@@ -1,14 +1,12 @@
 using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using SuperSocket.ProtoBase;
 
 namespace SuperSocket.MySQL.PackagePartReader
 {
     sealed class ErrorCodePartReader : PackagePartReader
     {
-        public override bool Process(QueryResult package, ref SequenceReader<byte> reader, out IPackagePartReader nextPartReader, out bool needMoreData)
+        public override bool Process(QueryResult package, ref SequenceReader<byte> reader, out IPackagePartReader<QueryResult> nextPartReader, out bool needMoreData)
         {
             if (reader.Length < 2)
             {

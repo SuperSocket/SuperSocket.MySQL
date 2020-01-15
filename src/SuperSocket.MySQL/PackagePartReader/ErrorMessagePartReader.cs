@@ -9,7 +9,7 @@ namespace SuperSocket.MySQL.PackagePartReader
 {
     sealed class ErrorMessagePartReader : PackagePartReader
     {
-        public override bool Process(QueryResult package, ref SequenceReader<byte> reader, out IPackagePartReader nextPartReader, out bool needMoreData)
+        public override bool Process(QueryResult package, ref SequenceReader<byte> reader, out IPackagePartReader<QueryResult> nextPartReader, out bool needMoreData)
         {
             nextPartReader = null;
 

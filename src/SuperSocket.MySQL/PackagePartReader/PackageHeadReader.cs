@@ -1,8 +1,6 @@
 using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using SuperSocket.ProtoBase;
 
 namespace SuperSocket.MySQL.PackagePartReader
 {
@@ -11,7 +9,7 @@ namespace SuperSocket.MySQL.PackagePartReader
     /// </summary>
     sealed class PackageHeadReader : PackagePartReader
     {
-        public override bool Process(QueryResult package, ref SequenceReader<byte> reader, out IPackagePartReader nextPartReader, out bool needMoreData)
+        public override bool Process(QueryResult package, ref SequenceReader<byte> reader, out IPackagePartReader<QueryResult> nextPartReader, out bool needMoreData)
         {
             reader.TryRead(out byte firstByte);
 
