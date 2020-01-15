@@ -1,4 +1,9 @@
 # SuperSocket.MySQL
+
+[![Join the chat at https://gitter.im/supersocket/community](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/supersocket/community)
+[![Build Status](https://travis-ci.org/supersocket/SuperSocket.MySQL.svg?branch=master)](https://travis-ci.org/supersocket/SuperSocket.MySQL)
+
+
 The MySQL driver base on SuperSocket
 
 ###### MySQL Protocol Specs
