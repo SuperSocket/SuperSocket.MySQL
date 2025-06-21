@@ -84,6 +84,26 @@ namespace SuperSocket.MySQL.Authentication
             await Channel.SendAsync(new ReadOnlyMemory<byte>(data));
         }
 
+        protected virtual async ValueTask OnPackageReceived(MySQLHandshakeResponsePacket package)
+        {
+            if (!IsAuthenticated)
+            {
+                // This is the authentication response
+                var success = await HandleAuthenticationAsync(package);
+                if (!success)
+                {
+                    // Authentication failed, close the connection
+                    await CloseAsync();
+                }
+            }
+            else
+            {
+                // This should be a command packet after authentication
+                // In a real implementation, you'd switch filters after authentication
+                Logger?.LogWarning("Received data after authentication - command processing not implemented");
+            }
+        }
+
         protected override async ValueTask OnSessionClosedAsync(EventArgs e)
         {
             Logger?.LogInformation($"MySQL session closed");
