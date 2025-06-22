@@ -2,14 +2,31 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using SuperSocket.MySQL.Packets;
 
 namespace SuperSocket.MySQL
 {
     internal class MySQLPacketFactory : IMySQLPacketFactory
     {
-        private readonly Dictionary<int, Func<MySQLPacket>> _packetCreators = new ();
+        public static MySQLPacketFactory Singleton { get; }
 
-        public MySQLPacketFactory RegisterPacketType<TMySQLPacket>(int packageType)
+        static MySQLPacketFactory()
+        {
+            Singleton = new MySQLPacketFactory()
+                .RegisterPacketType<HandshakePacket>(0x0A)
+                .RegisterPacketType<HandshakeResponsePacket>(0x00)
+                .RegisterPacketType<OKPacket>(0x00)
+                .RegisterPacketType<ErrorPacket>(0xFF);
+        }
+
+        private readonly Dictionary<int, Func<MySQLPacket>> _packetCreators = new();
+
+        private MySQLPacketFactory()
+        {
+            // Private constructor to enforce singleton pattern
+        }
+
+        private MySQLPacketFactory RegisterPacketType<TMySQLPacket>(int packageType)
             where TMySQLPacket : MySQLPacket, new()
         {
             _packetCreators[packageType] = () => new TMySQLPacket();

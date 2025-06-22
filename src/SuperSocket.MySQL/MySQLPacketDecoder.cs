@@ -6,9 +6,15 @@ namespace SuperSocket.MySQL
 {
     internal class MySQLPacketDecoder : IPackageDecoder<MySQLPacket>
     {
+        public static MySQLPacketDecoder Singleton { get; }
+        static MySQLPacketDecoder()
+        {
+            Singleton = new MySQLPacketDecoder(MySQLPacketFactory.Singleton);
+        }
+
         private readonly IMySQLPacketFactory _packetFactory;
 
-        public MySQLPacketDecoder(IMySQLPacketFactory packetFactory)
+        private MySQLPacketDecoder(IMySQLPacketFactory packetFactory)
         {
             _packetFactory = packetFactory ?? throw new ArgumentNullException(nameof(packetFactory));
         }

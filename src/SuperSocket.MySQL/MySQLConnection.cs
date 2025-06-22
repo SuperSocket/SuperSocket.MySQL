@@ -24,26 +24,12 @@ namespace SuperSocket.MySQL
         public bool IsAuthenticated { get; private set; }
 
         public MySQLConnection(string host, int port, string userName, string password)
-            : this(new MySQLPacketFactory()
-                .RegisterPacketType<HandshakePacket>(0x0A)
-                .RegisterPacketType<HandshakeResponsePacket>(0x00)
-                .RegisterPacketType<OKPacket>(0x00)
-                .RegisterPacketType<ErrorPacket>(0xFF))
+            : base(new MySQLPacketFilter(MySQLPacketDecoder.Singleton))
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _port = port > 0 ? port : DefaultPort;
             _userName = userName ?? throw new ArgumentNullException(nameof(userName));
             _password = password ?? throw new ArgumentNullException(nameof(password));
-        }
-
-        internal MySQLConnection(IMySQLPacketFactory mySQLPacketFactory)
-            : this(new MySQLPacketDecoder(mySQLPacketFactory))
-        {
-        }
-
-        internal MySQLConnection(IPackageDecoder<MySQLPacket> packageDecoder)
-            : base(new MySQLPacketFilter(packageDecoder))
-        {
         }
 
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
