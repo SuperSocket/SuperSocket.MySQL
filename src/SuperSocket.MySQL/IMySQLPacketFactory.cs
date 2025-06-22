@@ -2,7 +2,7 @@ using System;
 
 namespace SuperSocket.MySQL
 {
-    public interface IMySQLPacketFactory
+    internal interface IMySQLPacketFactory
     {
         MySQLPacket Create(int packageType);
     }

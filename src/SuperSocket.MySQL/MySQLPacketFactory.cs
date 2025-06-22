@@ -9,10 +9,11 @@ namespace SuperSocket.MySQL
     {
         private readonly Dictionary<int, Func<MySQLPacket>> _packetCreators = new ();
 
-        public void RegisterPacketType<TMySQLPacket>(int packageType)
+        public MySQLPacketFactory RegisterPacketType<TMySQLPacket>(int packageType)
             where TMySQLPacket : MySQLPacket, new()
         {
             _packetCreators[packageType] = () => new TMySQLPacket();
+            return this;
         }
 
         public MySQLPacket Create(int packageType)

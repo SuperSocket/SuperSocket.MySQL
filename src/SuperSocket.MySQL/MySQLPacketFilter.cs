@@ -4,13 +4,14 @@ using SuperSocket.ProtoBase;
 
 namespace SuperSocket.MySQL
 {
-    public class MySQLPacketFilter : FixedHeaderPipelineFilter<MySQLPacket>
+    internal class MySQLPacketFilter : FixedHeaderPipelineFilter<MySQLPacket>
     {
         private const int headerSize = 4; // MySQL package header size is 4 bytes
 
-        public MySQLPacketFilter()
+        public MySQLPacketFilter(IPackageDecoder<MySQLPacket> decoder)
             : base(headerSize)
         {
+            this.Decoder = decoder ?? throw new ArgumentNullException(nameof(decoder));
         }
 
         protected override int GetBodyLengthFromHeader(ref ReadOnlySequence<byte> buffer)
