@@ -26,7 +26,9 @@ namespace SuperSocket.MySQL
                 return null;
 
             var reader = new SequenceReader<byte>(buffer);
-            
+
+            reader.Advance(4); // Skip the first 4 bytes of the header
+
             // Read the first byte to determine packet type
             if (!reader.TryRead(out byte packetType))
                 return null;
