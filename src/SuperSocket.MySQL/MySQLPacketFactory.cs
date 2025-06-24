@@ -8,13 +8,12 @@ namespace SuperSocket.MySQL
 {
     internal class MySQLPacketFactory : IMySQLPacketFactory
     {
-        public static MySQLPacketFactory Singleton { get; }
+        public static MySQLPacketFactory ClientInstance { get; }
 
         static MySQLPacketFactory()
         {
-            Singleton = new MySQLPacketFactory()
-                .RegisterPacketType<HandshakePacket>(0x0A)
-                .RegisterPacketType<HandshakeResponsePacket>(0x00)
+            ClientInstance = new MySQLPacketFactory()
+                .RegisterPacketType<HandshakePacket>(-1)
                 .RegisterPacketType<OKPacket>(0x00)
                 .RegisterPacketType<ErrorPacket>(0xFF);
         }

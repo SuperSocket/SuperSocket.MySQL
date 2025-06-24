@@ -24,7 +24,7 @@ namespace SuperSocket.MySQL
         public bool IsAuthenticated { get; private set; }
 
         public MySQLConnection(string host, int port, string userName, string password)
-            : base(new MySQLPacketFilter(MySQLPacketDecoder.Singleton))
+            : base(new MySQLPacketFilter(MySQLPacketDecoder.ClientInstance))
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _port = port > 0 ? port : DefaultPort;
@@ -40,9 +40,12 @@ namespace SuperSocket.MySQL
             if (_port <= 0)
                 throw new ArgumentOutOfRangeException(nameof(_port), "Port must be a positive integer.");
 
-            var endPoint = new DnsEndPoint(_host, _port);
+            var endPoint = new DnsEndPoint(_host, _port, AddressFamily.InterNetwork);
 
-            await ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
+            var connected = await ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
+
+            if (!connected)
+                throw new InvalidOperationException($"Failed to connect to MySQL server at {_host}:{_port}");
 
             // Wait for server's handshake packet
             var packet = await ReceiveAsync().ConfigureAwait(false);
@@ -52,7 +55,7 @@ namespace SuperSocket.MySQL
             // Prepare handshake response
             var handshakeResponse = new HandshakeResponsePacket
             {
-                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 | 
+                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
                                        ClientCapabilities.CLIENT_SECURE_CONNECTION |
                                        ClientCapabilities.CLIENT_PLUGIN_AUTH |
                                        ClientCapabilities.CLIENT_CONNECT_WITH_DB),
@@ -71,7 +74,7 @@ namespace SuperSocket.MySQL
 
             // Wait for authentication result (OK packet or Error packet)
             var authResult = await ReceiveAsync().ConfigureAwait(false);
-            
+
             switch (authResult)
             {
                 case OKPacket okPacket:
@@ -80,8 +83,8 @@ namespace SuperSocket.MySQL
                     break;
                 case ErrorPacket errorPacket:
                     // Authentication failed
-                    var errorMsg = !string.IsNullOrEmpty(errorPacket.ErrorMessage) 
-                        ? errorPacket.ErrorMessage 
+                    var errorMsg = !string.IsNullOrEmpty(errorPacket.ErrorMessage)
+                        ? errorPacket.ErrorMessage
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
                 default:
@@ -165,6 +168,10 @@ namespace SuperSocket.MySQL
             {
                 IsAuthenticated = false;
             }
+        }
+
+        protected override void OnError(string message, Exception exception)
+        {
         }
     }
 }

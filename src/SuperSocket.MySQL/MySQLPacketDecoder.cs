@@ -1,15 +1,16 @@
 using System;
 using System.Buffers;
+using System.IO;
 using SuperSocket.ProtoBase;
 
 namespace SuperSocket.MySQL
 {
     internal class MySQLPacketDecoder : IPackageDecoder<MySQLPacket>
     {
-        public static MySQLPacketDecoder Singleton { get; }
+        public static MySQLPacketDecoder ClientInstance { get; }
         static MySQLPacketDecoder()
         {
-            Singleton = new MySQLPacketDecoder(MySQLPacketFactory.Singleton);
+            ClientInstance = new MySQLPacketDecoder(MySQLPacketFactory.ClientInstance);
         }
 
         private readonly IMySQLPacketFactory _packetFactory;
@@ -21,9 +22,28 @@ namespace SuperSocket.MySQL
 
         public MySQLPacket Decode(ref ReadOnlySequence<byte> buffer, object context)
         {
-            var package = _packetFactory.Create(0);
+            if (buffer.Length == 0)
+                return null;
+
             var reader = new SequenceReader<byte>(buffer);
+            
+            // Read the first byte to determine packet type
+            if (!reader.TryRead(out byte packetType))
+                return null;
+
+            var filter = context as MySQLPacketFilter;
+
+            // Reset reader to beginning
+            reader = new SequenceReader<byte>(buffer);
+
+            var package = _packetFactory.Create(
+                    (filter.ReceivedHandshake == true
+                        ? packetType
+                        : -1)); // Use -1 for HandshakePacket if not received yet
+
             package.Decode(ref reader, context);
+
+            filter.ReceivedHandshake = true;
             return package;
         }
     }
