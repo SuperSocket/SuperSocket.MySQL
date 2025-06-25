@@ -27,25 +27,33 @@ namespace SuperSocket.MySQL
 
             var reader = new SequenceReader<byte>(buffer);
 
-            reader.Advance(4); // Skip the first 4 bytes of the header
-
-            // Read the first byte to determine packet type
-            if (!reader.TryRead(out byte packetType))
-                return null;
+            reader.Advance(3); // Skip the first 3 bytes of the header
+            reader.TryRead(out var sequenceId); // Read the sequence ID
 
             var filter = context as MySQLPacketFilter;
+
+            var packetType = -1;
+
+            // Read the first byte to determine packet type
+            if (filter.ReceivedHandshake)
+            {
+                if (!reader.TryRead(out var packetTypeByte))
+                    return null;
+
+                packetType = (int)packetTypeByte;
+            }
 
             // Reset reader to beginning
             reader = new SequenceReader<byte>(buffer);
 
-            var package = _packetFactory.Create(
-                    (filter.ReceivedHandshake == true
-                        ? packetType
-                        : -1)); // Use -1 for HandshakePacket if not received yet
+            var package = _packetFactory.Create(packetType);
 
             package.Decode(ref reader, context);
+            package.SequenceId = sequenceId;
 
-            filter.ReceivedHandshake = true;
+            if (!filter.ReceivedHandshake)
+                filter.ReceivedHandshake = true;
+
             return package;
         }
     }

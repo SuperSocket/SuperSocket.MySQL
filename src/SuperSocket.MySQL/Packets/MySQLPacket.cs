@@ -5,6 +5,7 @@ namespace SuperSocket.MySQL
 {
     public abstract class MySQLPacket
     {
+        public int SequenceId { get; set; }
 
         /// <summary>
         /// Decodes the body of the log event from the binary data.

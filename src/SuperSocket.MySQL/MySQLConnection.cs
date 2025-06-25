@@ -57,8 +57,7 @@ namespace SuperSocket.MySQL
             {
                 CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
                                        ClientCapabilities.CLIENT_SECURE_CONNECTION |
-                                       ClientCapabilities.CLIENT_PLUGIN_AUTH |
-                                       ClientCapabilities.CLIENT_CONNECT_WITH_DB),
+                                       ClientCapabilities.CLIENT_PLUGIN_AUTH),
                 MaxPacketSize = 16777216, // 16MB
                 CharacterSet = 0x21, // utf8_general_ci
                 Username = _userName,
@@ -68,6 +67,7 @@ namespace SuperSocket.MySQL
 
             // Generate authentication response
             handshakeResponse.AuthResponse = GenerateAuthResponse(handshakePacket);
+            handshakeResponse.SequenceId = packet.SequenceId + 1;
 
             // Send handshake response
             await SendAsync(PacketEncoder, handshakeResponse).ConfigureAwait(false);

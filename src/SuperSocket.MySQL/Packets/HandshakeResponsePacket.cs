@@ -68,92 +68,90 @@ namespace SuperSocket.MySQL.Packets
 
         protected internal override int Encode(IBufferWriter<byte> writer)
         {
+            var contentWriter = new ArrayBufferWriter<byte>();
+
             var bytesWritten = 0;
-            var span = writer.GetSpan(4);
+            var span = contentWriter.GetSpan(4);
             
             // Write capability flags (4 bytes)
             BitConverter.TryWriteBytes(span, CapabilityFlags);
-            writer.Advance(4);
+            contentWriter.Advance(4);
             bytesWritten += 4;
-            
+
             // Write max packet size (4 bytes)
-            span = writer.GetSpan(4);
+            span = contentWriter.GetSpan(4);
             BitConverter.TryWriteBytes(span, MaxPacketSize);
-            writer.Advance(4);
+            contentWriter.Advance(4);
             bytesWritten += 4;
-            
+
             // Write character set (1 byte)
-            span = writer.GetSpan(1);
+            span = contentWriter.GetSpan(1);
             span[0] = CharacterSet;
-            writer.Advance(1);
+            contentWriter.Advance(1);
             bytesWritten += 1;
             
             // Write reserved bytes (23 bytes of zeros)
-            span = writer.GetSpan(23);
+            span = contentWriter.GetSpan(23);
             span.Slice(0, 23).Clear();
-            writer.Advance(23);
+            contentWriter.Advance(23);
             bytesWritten += 23;
-            
-            // Write null-terminated username
-            var usernameBytes = Encoding.UTF8.GetBytes(Username ?? string.Empty);
-            span = writer.GetSpan(usernameBytes.Length + 1);
-            usernameBytes.CopyTo(span);
-            span[usernameBytes.Length] = 0; // null terminator
-            writer.Advance(usernameBytes.Length + 1);
-            bytesWritten += usernameBytes.Length + 1;
+
+            bytesWritten += contentWriter.WriteNullTerminatedString(Username);
             
             // Write auth response
             if (AuthResponse != null)
             {
-            if ((CapabilityFlags & 0x00200000) != 0) // CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA
-            {
-                bytesWritten += writer.WriteUInt64((ulong)AuthResponse.Length);
-            }
-            else if ((CapabilityFlags & 0x00008000) != 0) // CLIENT_SECURE_CONNECTION
-            {
-                span = writer.GetSpan(1);
-                span[0] = (byte)AuthResponse.Length;
-                writer.Advance(1);
-                bytesWritten += 1;
-            }
-            
-            span = writer.GetSpan(AuthResponse.Length);
-            AuthResponse.CopyTo(span);
-            writer.Advance(AuthResponse.Length);
-            bytesWritten += AuthResponse.Length;
-            
-            if ((CapabilityFlags & 0x00008000) == 0) // Not CLIENT_SECURE_CONNECTION
-            {
-                span = writer.GetSpan(1);
-                span[0] = 0; // null terminator
-                writer.Advance(1);
-                bytesWritten += 1;
-            }
+                if ((CapabilityFlags & (uint)ClientCapabilities.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA) != 0) // CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA
+                {
+                    bytesWritten += contentWriter.WriteLengthEncodedInteger((ulong)AuthResponse.Length);
+                    contentWriter.Write(AuthResponse);
+                    bytesWritten += AuthResponse.Length;
+                }
+                else if ((CapabilityFlags & (uint)ClientCapabilities.CLIENT_SECURE_CONNECTION) != 0) // CLIENT_SECURE_CONNECTION
+                {
+                    span = contentWriter.GetSpan(1);
+                    span[0] = (byte)AuthResponse.Length;
+                    contentWriter.Advance(1);
+                    bytesWritten += 1;
+
+                    contentWriter.Write(AuthResponse);
+                    bytesWritten += AuthResponse.Length;
+                }
+                else
+                {
+                    contentWriter.Write(AuthResponse);
+                    bytesWritten += AuthResponse.Length;
+
+                    span = contentWriter.GetSpan(1);
+                    span[0] = 0; // null terminator
+                    contentWriter.Advance(1);
+                    bytesWritten += 1;
+                }
             }
             
             // Write database name if present
             if ((CapabilityFlags & 0x00000008) != 0 && !string.IsNullOrEmpty(Database))
             {
-                var databaseBytes = Encoding.UTF8.GetBytes(Database);
-                span = writer.GetSpan(databaseBytes.Length + 1);
-                databaseBytes.CopyTo(span);
-                span[databaseBytes.Length] = 0; // null terminator
-                writer.Advance(databaseBytes.Length + 1);
-                bytesWritten += databaseBytes.Length + 1;
+                bytesWritten += contentWriter.WriteNullTerminatedString(Database);
             }
             
             // Write auth plugin name if present
             if ((CapabilityFlags & 0x00080000) != 0 && !string.IsNullOrEmpty(AuthPluginName))
             {
-                var pluginNameBytes = Encoding.UTF8.GetBytes(AuthPluginName);
-                span = writer.GetSpan(pluginNameBytes.Length + 1);
-                pluginNameBytes.CopyTo(span);
-                span[pluginNameBytes.Length] = 0; // null terminator
-                writer.Advance(pluginNameBytes.Length + 1);
-                bytesWritten += pluginNameBytes.Length + 1;
+                bytesWritten += contentWriter.WriteNullTerminatedString(AuthPluginName);
             }
-            
-            return bytesWritten;
+
+            var headerSpan = writer.GetSpan(4);
+            headerSpan[0] = (byte)(bytesWritten & 0xFF);
+            headerSpan[1] = (byte)((bytesWritten >> 8) & 0xFF);
+            headerSpan[2] = (byte)((bytesWritten >> 16) & 0xFF);
+            headerSpan[3] = (byte)SequenceId; // Sequence ID, typically starts at 0 for the first packet  
+            //headerSpan[4] = 0x00; // Set header byte
+            writer.Advance(4);
+
+            writer.Write(contentWriter.WrittenSpan);
+
+            return bytesWritten + 4;
         }
     }
 }

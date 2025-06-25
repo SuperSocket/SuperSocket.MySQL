@@ -104,12 +104,12 @@ namespace SuperSocket.MySQL
             
             if (!string.IsNullOrEmpty(value))
             {
-                var bytes = System.Text.Encoding.UTF8.GetBytes(value);
-                var span = writer.GetSpan(bytes.Length + 1);
-                bytes.CopyTo(span);
-                span[bytes.Length] = 0; // null terminator
-                writer.Advance(bytes.Length + 1);
-                bytesWritten = bytes.Length + 1;
+                var maxByteCount = Encoding.UTF8.GetMaxByteCount(value.Length);
+                var span = writer.GetSpan(maxByteCount + 1);
+                var encodedBytes = Encoding.UTF8.GetBytes(value, span);
+                span[encodedBytes] = 0; // null terminator
+                bytesWritten = encodedBytes + 1;
+                writer.Advance(bytesWritten);
             }
             else
             {
