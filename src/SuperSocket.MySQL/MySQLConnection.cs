@@ -97,15 +97,6 @@ namespace SuperSocket.MySQL
             if (string.IsNullOrEmpty(_password))
                 return Array.Empty<byte>();
 
-            // Combine auth plugin data parts to form the complete salt
-            var salt = new byte[20];
-            handshakePacket.AuthPluginDataPart1?.CopyTo(salt, 0);
-            if (handshakePacket.AuthPluginDataPart2 != null)
-            {
-                var part2Length = Math.Min(handshakePacket.AuthPluginDataPart2.Length, 12);
-                Array.Copy(handshakePacket.AuthPluginDataPart2, 0, salt, 8, part2Length);
-            }
-
             // MySQL native password authentication algorithm:
             // SHA1(password) XOR SHA1(salt + SHA1(SHA1(password)))
             using (var sha1 = SHA1.Create())
@@ -114,13 +105,20 @@ namespace SuperSocket.MySQL
                 var sha1Password = sha1.ComputeHash(passwordBytes);
                 var sha1Sha1Password = sha1.ComputeHash(sha1Password);
 
-                var combined = new byte[salt.Length + sha1Sha1Password.Length];
-                salt.CopyTo(combined, 0);
-                sha1Sha1Password.CopyTo(combined, salt.Length);
+                sha1.TransformBlock(handshakePacket.AuthPluginDataPart1, 0, handshakePacket.AuthPluginDataPart1.Length, null, 0);
 
-                var sha1Combined = sha1.ComputeHash(combined);
+                if (handshakePacket.AuthPluginDataPart2 != null)
+                {
+                    var part2Length = Math.Min(handshakePacket.AuthPluginDataPart2.Length, 12);
+                    sha1.TransformBlock(handshakePacket.AuthPluginDataPart2, 0, part2Length, null, 0);
+                }
+
+                sha1.TransformFinalBlock(sha1Sha1Password, 0, sha1Sha1Password.Length);
+
+                var sha1Combined = sha1.Hash;
 
                 var result = new byte[sha1Password.Length];
+
                 for (int i = 0; i < sha1Password.Length; i++)
                 {
                     result[i] = (byte)(sha1Password[i] ^ sha1Combined[i]);
@@ -168,10 +166,6 @@ namespace SuperSocket.MySQL
             {
                 IsAuthenticated = false;
             }
-        }
-
-        protected override void OnError(string message, Exception exception)
-        {
         }
     }
 }

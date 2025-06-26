@@ -2,9 +2,9 @@ using System.Buffers;
 
 namespace SuperSocket.MySQL.Packets
 {
-    public class OKPacket : MySQLPacket
+    public class OKPacket : MySQLPacket, IPacketWithHeaderByte
     {
-        public byte Header { get; set; } = 0x00; // OK packet identifier
+        public byte Header { get; set; }
         public ulong AffectedRows { get; set; }
         public ulong LastInsertId { get; set; }
         public ushort StatusFlags { get; set; }
@@ -13,10 +13,6 @@ namespace SuperSocket.MySQL.Packets
 
         protected internal override void Decode(ref SequenceReader<byte> reader, object context)
         {
-            // Read header (should be 0x00 for OK packet)
-            reader.TryRead(out byte header);
-            Header = header;
-            
             // Read affected rows (length-encoded integer)
             AffectedRows = reader.TryReadLengthEncodedInteger(out long affectedRows) ? (ulong)affectedRows : 0;
             

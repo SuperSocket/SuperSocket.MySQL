@@ -43,9 +43,6 @@ namespace SuperSocket.MySQL
                 packetType = (int)packetTypeByte;
             }
 
-            // Reset reader to beginning
-            reader = new SequenceReader<byte>(buffer);
-
             var package = _packetFactory.Create(packetType);
 
             package.Decode(ref reader, context);

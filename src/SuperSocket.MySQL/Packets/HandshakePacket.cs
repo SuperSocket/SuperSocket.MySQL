@@ -25,57 +25,57 @@ namespace SuperSocket.MySQL.Packets
             // Read protocol version (1 byte)
             reader.TryRead(out byte protocolVersion);
             ProtocolVersion = protocolVersion;
-            
+
             // Read null-terminated server version string
             ServerVersion = reader.TryReadNullTerminatedString(out string serverVersion) ? serverVersion : string.Empty;
-            
+
             // Read connection ID (4 bytes)
             reader.TryReadLittleEndian(out int connectionId);
             ConnectionId = (uint)connectionId;
-            
+
             // Read auth plugin data part 1 (8 bytes)
             AuthPluginDataPart1 = new byte[8];
             reader.TryCopyTo(AuthPluginDataPart1);
             reader.Advance(8);
-            
+
             // Skip filler byte (1 byte)
             reader.Advance(1);
 
             // Read capability flags lower (2 bytes)
             reader.TryReadLittleEndian(out short capabilityFlagsLower);
             CapabilityFlagsLower = (uint)(ushort)capabilityFlagsLower;
-            
+
             // Check if more data is available (for MySQL 4.1+)
             if (reader.Remaining > 0)
             {
                 // Read character set (1 byte)
                 reader.TryRead(out byte characterSet);
                 CharacterSet = characterSet;
-                
+
                 // Read status flags (2 bytes)
                 reader.TryReadLittleEndian(out short statusFlags);
                 StatusFlags = (ushort)statusFlags;
-                
+
                 // Read capability flags upper (2 bytes)
                 reader.TryReadLittleEndian(out short capabilityFlagsUpper);
                 CapabilityFlagsUpper = (uint)(ushort)capabilityFlagsUpper;
-                
+
                 // Read auth plugin data length (1 byte)
                 reader.TryRead(out byte authPluginDataLength);
                 AuthPluginDataLength = authPluginDataLength;
-                
+
                 // Skip reserved bytes (10 bytes)
                 reader.Advance(10);
-                
+
                 // Read auth plugin data part 2 if present
-                if ((CapabilityFlags & 0x00008000) != 0) // CLIENT_SECURE_CONNECTION
+                if (AuthPluginDataLength > 8)
                 {
                     var part2Length = Math.Max(13, AuthPluginDataLength - 8);
                     AuthPluginDataPart2 = new byte[part2Length];
                     reader.TryCopyTo(AuthPluginDataPart2);
                     reader.Advance(part2Length);
                 }
-                
+
                 // Read auth plugin name if present
                 if ((CapabilityFlags & 0x00080000) != 0) // CLIENT_PLUGIN_AUTH
                 {

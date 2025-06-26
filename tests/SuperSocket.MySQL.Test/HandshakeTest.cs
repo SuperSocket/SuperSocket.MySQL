@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Xunit;
 using SuperSocket.MySQL;
 using SuperSocket.MySQL.Packets;
+using System.Buffers.Binary;
 
 namespace SuperSocket.MySQL.Test
 {
@@ -42,6 +43,12 @@ namespace SuperSocket.MySQL.Test
             packetData.Add(authPluginDataLength);
             packetData.AddRange(new byte[10]); // reserved
             packetData.AddRange(authPluginDataPart2);
+            
+            if (authPluginDataPart2.Length < 13)
+            {
+                packetData.AddRange(new byte[13 - authPluginDataPart2.Length]); // pad to 13 bytes
+            }
+
             packetData.AddRange(Encoding.UTF8.GetBytes(authPluginName));
             packetData.Add(0); // null terminator
 
@@ -89,11 +96,11 @@ namespace SuperSocket.MySQL.Test
             // Assert
             Assert.True(bytesWritten > 0, "Should write some bytes");
             
-            var writtenData = buffer.WrittenSpan.ToArray();
-            Assert.True(writtenData.Length > 0, "Should have written data");
+            Assert.True(buffer.WrittenSpan.Length > 0, "Should have written data");
             
             // Verify capability flags are written (first 4 bytes)
-            var capabilityFlags = BitConverter.ToUInt32(writtenData, 0);
+            var capabilityFlags = BinaryPrimitives.ReadUInt32LittleEndian(buffer.WrittenSpan.Slice(0, 4));
+
             Assert.Equal(handshakeResponse.CapabilityFlags, capabilityFlags);
         }
 

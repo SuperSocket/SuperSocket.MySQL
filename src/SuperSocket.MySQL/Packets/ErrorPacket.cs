@@ -3,9 +3,9 @@ using System.Text;
 
 namespace SuperSocket.MySQL.Packets
 {
-    public class ErrorPacket : MySQLPacket
+    public class ErrorPacket : MySQLPacket, IPacketWithHeaderByte
     {
-        public byte Header { get; set; } = 0xFF; // Error packet identifier
+        public byte Header { get; set; }
         public ushort ErrorCode { get; set; }
         public string SqlStateMarker { get; set; } = "#";
         public string SqlState { get; set; }
@@ -13,10 +13,6 @@ namespace SuperSocket.MySQL.Packets
 
         protected internal override void Decode(ref SequenceReader<byte> reader, object context)
         {
-            // Read header (should be 0xFF for Error packet)
-            reader.TryRead(out byte header);
-            Header = header;
-            
             // Read error code (2 bytes)
             reader.TryReadLittleEndian(out short errorCode);
             ErrorCode = (ushort)errorCode;

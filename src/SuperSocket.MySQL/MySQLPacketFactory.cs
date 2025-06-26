@@ -39,7 +39,15 @@ namespace SuperSocket.MySQL
                 throw new InvalidDataException($"No packet registered for package type {packageType}");
             }
 
-            return creator();
+            var packet = creator();
+
+            if (packet is IPacketWithHeaderByte packetWithHeader)
+            {
+                // If the packet type byte is to be encoded, set it as the first byte of the content
+                packetWithHeader.Header = (byte)packageType;
+            }
+
+            return packet;
         }
     }
 }
