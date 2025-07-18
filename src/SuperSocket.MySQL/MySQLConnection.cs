@@ -42,53 +42,67 @@ namespace SuperSocket.MySQL
 
             var endPoint = new DnsEndPoint(_host, _port, AddressFamily.InterNetwork);
 
-            var connected = await ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
-
-            if (!connected)
-                throw new InvalidOperationException($"Failed to connect to MySQL server at {_host}:{_port}");
-
-            // Wait for server's handshake packet
-            var packet = await ReceiveAsync().ConfigureAwait(false);
-            if (!(packet is HandshakePacket handshakePacket))
-                throw new InvalidOperationException("Expected handshake packet from server.");
-
-            // Prepare handshake response
-            var handshakeResponse = new HandshakeResponsePacket
+            try
             {
-                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
-                                       ClientCapabilities.CLIENT_SECURE_CONNECTION |
-                                       ClientCapabilities.CLIENT_PLUGIN_AUTH),
-                MaxPacketSize = 16777216, // 16MB
-                CharacterSet = 0x21, // utf8_general_ci
-                Username = _userName,
-                Database = string.Empty, // Can be set later if needed
-                AuthPluginName = "mysql_native_password"
-            };
+                var connected = await ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
 
-            // Generate authentication response
-            handshakeResponse.AuthResponse = GenerateAuthResponse(handshakePacket);
-            handshakeResponse.SequenceId = packet.SequenceId + 1;
+                if (!connected)
+                    throw new InvalidOperationException($"MySQL authentication failed: Unable to connect to server at {_host}:{_port}");
 
-            // Send handshake response
-            await SendAsync(PacketEncoder, handshakeResponse).ConfigureAwait(false);
+                // Wait for server's handshake packet
+                var packet = await ReceiveAsync().ConfigureAwait(false);
+                if (!(packet is HandshakePacket handshakePacket))
+                    throw new InvalidOperationException("MySQL authentication failed: Expected handshake packet from server but received unexpected packet");
 
-            // Wait for authentication result (OK packet or Error packet)
-            var authResult = await ReceiveAsync().ConfigureAwait(false);
+                // Prepare handshake response
+                var handshakeResponse = new HandshakeResponsePacket
+                {
+                    CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
+                                           ClientCapabilities.CLIENT_SECURE_CONNECTION |
+                                           ClientCapabilities.CLIENT_PLUGIN_AUTH),
+                    MaxPacketSize = 16777216, // 16MB
+                    CharacterSet = 0x21, // utf8_general_ci
+                    Username = _userName,
+                    Database = string.Empty, // Can be set later if needed
+                    AuthPluginName = "mysql_native_password"
+                };
 
-            switch (authResult)
+                // Generate authentication response
+                handshakeResponse.AuthResponse = GenerateAuthResponse(handshakePacket);
+                handshakeResponse.SequenceId = packet.SequenceId + 1;
+
+                // Send handshake response
+                await SendAsync(PacketEncoder, handshakeResponse).ConfigureAwait(false);
+
+                // Wait for authentication result (OK packet or Error packet)
+                var authResult = await ReceiveAsync().ConfigureAwait(false);
+
+                switch (authResult)
+                {
+                    case OKPacket okPacket:
+                        // Authentication successful
+                        IsAuthenticated = true;
+                        break;
+                    case ErrorPacket errorPacket:
+                        // Authentication failed
+                        var errorMsg = !string.IsNullOrEmpty(errorPacket.ErrorMessage)
+                            ? errorPacket.ErrorMessage
+                            : "authentication failed";
+                        throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
+                    default:
+                        // Any other response during authentication is also an authentication failure
+                        throw new InvalidOperationException($"MySQL authentication failed: Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
+                }
+            }
+            catch (InvalidOperationException)
             {
-                case OKPacket okPacket:
-                    // Authentication successful
-                    IsAuthenticated = true;
-                    break;
-                case ErrorPacket errorPacket:
-                    // Authentication failed
-                    var errorMsg = !string.IsNullOrEmpty(errorPacket.ErrorMessage)
-                        ? errorPacket.ErrorMessage
-                        : "Authentication failed";
-                    throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
-                default:
-                    throw new InvalidOperationException($"Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
+                // Re-throw InvalidOperationException as-is (these are our authentication failures)
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Convert any other exception during authentication to authentication failure
+                throw new InvalidOperationException($"MySQL authentication failed: {ex.Message}", ex);
             }
         }
 
@@ -160,7 +174,14 @@ namespace SuperSocket.MySQL
         {
             try
             {
+                // Always attempt to close, but catch any exceptions to prevent
+                // NullReferenceException when connection was never established
                 await CloseAsync();
+            }
+            catch (Exception)
+            {
+                // Ignore any exceptions during cleanup - we're disconnecting anyway
+                // This ensures DisconnectAsync is always safe to call
             }
             finally
             {
