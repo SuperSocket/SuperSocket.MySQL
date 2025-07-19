@@ -15,7 +15,8 @@ namespace SuperSocket.MySQL
             ClientInstance = new MySQLPacketFactory()
                 .RegisterPacketType<HandshakePacket>(-1)
                 .RegisterPacketType<OKPacket>(0x00)
-                .RegisterPacketType<ErrorPacket>(0xFF);
+                .RegisterPacketType<ErrorPacket>(0xFF)
+                .RegisterPacketType<EOFPacket>(0xFE);
         }
 
         private readonly Dictionary<int, Func<MySQLPacket>> _packetCreators = new();
