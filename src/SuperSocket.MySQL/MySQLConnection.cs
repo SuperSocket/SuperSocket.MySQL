@@ -88,8 +88,6 @@ namespace SuperSocket.MySQL
                         ? errorPacket.ErrorMessage
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
-                case EOFPacket eofPacket:
-                    throw new InvalidOperationException($"MySQL authentication failed.");
                 default:
                     throw new InvalidOperationException($"Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
             }
