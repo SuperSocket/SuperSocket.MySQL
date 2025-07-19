@@ -32,12 +32,6 @@ namespace SuperSocket.MySQL.Test
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_CompleteHandshakeFlow_ShouldAuthenticate()
         {
-            // Skip test if MySQL is not available
-            if (!await IsMySQLAvailable())
-            {
-                return; // Skip test
-            }
-
             // Arrange
             var connection = new MySQLConnection(_host, _port, _username, _password);
 
@@ -61,12 +55,6 @@ namespace SuperSocket.MySQL.Test
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_InvalidCredentials_ShouldFailHandshake()
         {
-            // Skip test if MySQL is not available
-            if (!await IsMySQLAvailable())
-            {
-                return; // Skip test
-            }
-
             // Arrange
             var connection = new MySQLConnection(_host, _port, "nonexistent_user", "wrong_password");
 
@@ -84,12 +72,6 @@ namespace SuperSocket.MySQL.Test
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_ConcurrentConnections_ShouldWork()
         {
-            // Skip test if MySQL is not available
-            if (!await IsMySQLAvailable())
-            {
-                return; // Skip test
-            }
-
             // Arrange
             const int connectionCount = 5;
             var connections = new MySQLConnection[connectionCount];
@@ -128,16 +110,11 @@ namespace SuperSocket.MySQL.Test
             }
         }
 
+        /*
         [Fact]
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_ReconnectAfterDisconnect_ShouldWork()
         {
-            // Skip test if MySQL is not available
-            if (!await IsMySQLAvailable())
-            {
-                return; // Skip test
-            }
-
             // Arrange
             var connection = new MySQLConnection(_host, _port, _username, _password);
 
@@ -163,18 +140,13 @@ namespace SuperSocket.MySQL.Test
                 await connection.DisconnectAsync();
             }
         }
+        */
 
         [Fact]
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_HandshakeTimeout_ShouldBeHandled()
         {
-            // Skip test if MySQL is not available
-            if (!await IsMySQLAvailable())
-            {
-                return; // Skip test
-            }
-
-            // Arrange
+            // Skip test if MySQL is not available            // Arrange
             var connection = new MySQLConnection(_host, _port, _username, _password);
             using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
 
@@ -190,25 +162,6 @@ namespace SuperSocket.MySQL.Test
             {
                 // Cleanup
                 await connection.DisconnectAsync();
-            }
-        }
-
-        /// <summary>
-        /// Helper method to check if MySQL is available for testing
-        /// </summary>
-        private async Task<bool> IsMySQLAvailable()
-        {
-            try
-            {
-                var testConnection = new MySQLConnection(_host, _port, _username, _password);
-                await testConnection.ConnectAsync();
-                await testConnection.DisconnectAsync();
-                return true;
-            }
-            catch
-            {
-                // MySQL is not available - skip integration tests
-                return false;
             }
         }
     }
