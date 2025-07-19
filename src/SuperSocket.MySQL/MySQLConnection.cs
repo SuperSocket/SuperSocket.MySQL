@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SuperSocket.Client;
 using SuperSocket.MySQL.Packets;
 using SuperSocket.ProtoBase;
@@ -23,8 +24,8 @@ namespace SuperSocket.MySQL
 
         public bool IsAuthenticated { get; private set; }
 
-        public MySQLConnection(string host, int port, string userName, string password)
-            : base(new MySQLPacketFilter(MySQLPacketDecoder.ClientInstance))
+        public MySQLConnection(string host, int port, string userName, string password, ILogger logger = null)
+            : base(new MySQLPacketFilter(MySQLPacketDecoder.ClientInstance), logger)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _port = port > 0 ? port : DefaultPort;
@@ -87,6 +88,8 @@ namespace SuperSocket.MySQL
                         ? errorPacket.ErrorMessage
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
+                case EOFPacket eofPacket:
+                    throw new InvalidOperationException($"MySQL authentication failed.");
                 default:
                     throw new InvalidOperationException($"Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
             }
@@ -160,7 +163,8 @@ namespace SuperSocket.MySQL
         {
             try
             {
-                await CloseAsync();
+                if (Connection != null)
+                    await CloseAsync();
             }
             finally
             {
