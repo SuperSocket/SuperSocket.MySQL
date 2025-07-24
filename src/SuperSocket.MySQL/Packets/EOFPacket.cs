@@ -12,7 +12,7 @@ namespace SuperSocket.MySQL.Packets
 
         public int Length { get;  private set; }
 
-        protected internal override void Decode(ref SequenceReader<byte> reader, object context)
+        protected internal override MySQLPacket Decode(ref SequenceReader<byte> reader, object context)
         {
             Length = (int)reader.Remaining;
 
@@ -25,6 +25,8 @@ namespace SuperSocket.MySQL.Packets
                 throw new InvalidOperationException("Failed to read StatusFlags from EOFPacket.");
 
             StatusFlags = statusFlags;
+
+            return this;
         }
 
         protected internal override int Encode(IBufferWriter<byte> writer)

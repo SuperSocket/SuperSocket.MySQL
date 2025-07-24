@@ -10,6 +10,8 @@ namespace SuperSocket.MySQL
     {
         public static MySQLPacketFactory ClientInstance { get; }
 
+        private static readonly MySQLPacket unknownPacket = new UnknownPacket();
+
         static MySQLPacketFactory()
         {
             ClientInstance = new MySQLPacketFactory()
@@ -37,7 +39,8 @@ namespace SuperSocket.MySQL
         {
             if (!_packetCreators.TryGetValue(packageType, out var creator))
             {
-                throw new InvalidDataException($"No packet registered for package type {packageType}");
+               //throw new InvalidDataException($"No packet registered for package type {packageType}");
+               return unknownPacket;
             }
 
             var packet = creator();

@@ -1,4 +1,6 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -141,12 +143,12 @@ namespace SuperSocket.MySQL
         }
 
         /// <summary>
-        /// Executes a simple query (placeholder implementation)
+        /// Executes a SQL query and returns the result
         /// </summary>
         /// <param name="query">The SQL query to execute</param>
         /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Task representing the async operation</returns>
-        public async Task<string> ExecuteQueryAsync(string query, CancellationToken cancellationToken = default)
+        /// <returns>QueryResult containing the query results</returns>
+        public async Task<QueryResultPacket> ExecuteQueryAsync(string query, CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
                 throw new InvalidOperationException("Connection is not authenticated. Call ConnectAsync first.");
@@ -154,16 +156,69 @@ namespace SuperSocket.MySQL
             if (string.IsNullOrEmpty(query))
                 throw new ArgumentException("Query cannot be null or empty.", nameof(query));
 
-            // This is a placeholder implementation
-            // In a complete implementation, you would:
-            // 1. Create a COM_QUERY packet with the SQL query
-            // 2. Send the packet to the server
-            // 3. Receive and parse the result set
-            // 4. Return the results
+            try
+            {
+                // Create and send COM_QUERY command packet
+                var commandPacket = new CommandPacket(MySQLCommand.COM_QUERY, query)
+                {
+                    SequenceId = 0
+                };
 
-            await Task.Delay(10, cancellationToken); // Simulate async operation
-            return "Query execution not fully implemented yet";
+                await SendAsync(PacketEncoder, commandPacket).ConfigureAwait(false);
+
+                // Read response
+                var response = await ReceiveAsync().ConfigureAwait(false);
+
+                return (QueryResultPacket)response;
+            }
+            catch (Exception ex)
+            {
+                return QueryResultPacket.FromError(-1, ex.Message);
+            }
         }
+
+        /// <summary>
+        /// Executes a SQL query and returns a simple string representation
+        /// </summary>
+        /// <param name="query">The SQL query to execute</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns>String representation of the results</returns>
+        public async Task<string> ExecuteQueryStringAsync(string query, CancellationToken cancellationToken = default)
+        {
+            var result = await ExecuteQueryAsync(query, cancellationToken).ConfigureAwait(false);
+            
+            if (!result.IsSuccess)
+            {
+                return $"Error {result.ErrorCode}: {result.ErrorMessage}";
+            }
+
+            if (result.Columns == null || result.Columns.Count == 0)
+            {
+                return $"Query executed successfully. {result.AffectedRows} rows affected.";
+            }
+
+            var sb = new StringBuilder();
+            
+            // Add column headers
+            sb.AppendLine(string.Join("\t", result.Columns));
+            
+            // Add separator line
+            sb.AppendLine(new string('-', result.Columns.Count * 10));
+
+            // Add data rows
+            if (result.Rows != null)
+            {
+                foreach (var row in result.Rows)
+                {
+                    sb.AppendLine(string.Join("\t", row ?? new string[result.Columns.Count]));
+                }
+            }
+            
+            sb.AppendLine($"\n{result.Rows?.Count ?? 0} rows returned.");
+            
+            return sb.ToString();
+        }
+
 
         /// <summary>
         /// Disconnects from the MySQL server and resets authentication state

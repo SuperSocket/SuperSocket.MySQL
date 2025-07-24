@@ -64,5 +64,14 @@ namespace SuperSocket.MySQL
             value = Encoding.UTF8.GetString(sequence);
             return true;
         }
+
+        public static ulong ReadLengthEncodedInteger(this ref SequenceReader<byte> reader)
+        {
+            if (TryReadLengthEncodedInteger(ref reader, out long value))
+            {
+                return (ulong)value;
+            }
+            throw new InvalidOperationException("Failed to read length-encoded integer");
+        }
     }
 }

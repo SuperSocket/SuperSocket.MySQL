@@ -20,7 +20,7 @@ namespace SuperSocket.MySQL.Packets
 
         public uint CapabilityFlags => CapabilityFlagsLower | ((uint)CapabilityFlagsUpper << 16);
 
-        protected internal override void Decode(ref SequenceReader<byte> reader, object context)
+        protected internal override MySQLPacket Decode(ref SequenceReader<byte> reader, object context)
         {
             // Read protocol version (1 byte)
             reader.TryRead(out byte protocolVersion);
@@ -82,6 +82,8 @@ namespace SuperSocket.MySQL.Packets
                     AuthPluginName = reader.TryReadNullTerminatedString(out string authPluginName) ? authPluginName : string.Empty;
                 }
             }
+
+            return this;
         }
 
         protected internal override int Encode(IBufferWriter<byte> writer)

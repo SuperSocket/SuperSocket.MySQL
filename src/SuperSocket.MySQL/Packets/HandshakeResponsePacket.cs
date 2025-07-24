@@ -15,7 +15,7 @@ namespace SuperSocket.MySQL.Packets
         public string Database { get; set; }
         public string AuthPluginName { get; set; }
 
-        protected internal override void Decode(ref SequenceReader<byte> reader, object context)
+        protected internal override MySQLPacket Decode(ref SequenceReader<byte> reader, object context)
         {
             // Read capability flags (4 bytes)
             reader.TryReadLittleEndian(out int capabilityFlags);
@@ -66,6 +66,8 @@ namespace SuperSocket.MySQL.Packets
             {
                 AuthPluginName = reader.TryReadNullTerminatedString(out string authPluginName) ? authPluginName : string.Empty;
             }
+
+            return this;
         }
 
         protected internal override int Encode(IBufferWriter<byte> writer)

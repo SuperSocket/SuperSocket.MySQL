@@ -11,26 +11,26 @@ namespace SuperSocket.MySQL.Packets
         public string SqlState { get; set; }
         public string ErrorMessage { get; set; }
 
-        protected internal override void Decode(ref SequenceReader<byte> reader, object context)
+        protected internal override MySQLPacket Decode(ref SequenceReader<byte> reader, object context)
         {
             // Read error code (2 bytes)
             reader.TryReadLittleEndian(out short errorCode);
             ErrorCode = (ushort)errorCode;
-            
+
             // Check for SQL state marker and state (optional, depends on capability flags)
             if (reader.Remaining >= 6 && reader.UnreadSequence.FirstSpan[0] == (byte)'#')
             {
                 // Read SQL state marker
                 reader.TryRead(out byte marker);
                 SqlStateMarker = ((char)marker).ToString();
-                
+
                 // Read SQL state (5 characters)
                 var sqlStateBytes = new byte[5];
                 reader.TryCopyTo(sqlStateBytes);
                 reader.Advance(5);
                 SqlState = Encoding.UTF8.GetString(sqlStateBytes);
             }
-            
+
             // Read error message (rest of the packet)
             if (reader.Remaining > 0)
             {
@@ -39,6 +39,8 @@ namespace SuperSocket.MySQL.Packets
                 reader.Advance((int)reader.Remaining);
                 ErrorMessage = Encoding.UTF8.GetString(messageBytes);
             }
+            
+            return this;
         }
 
         protected internal override int Encode(IBufferWriter<byte> writer)

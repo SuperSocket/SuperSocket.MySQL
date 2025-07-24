@@ -45,7 +45,7 @@ namespace SuperSocket.MySQL
 
             var package = _packetFactory.Create(packetType);
 
-            package.Decode(ref reader, context);
+            package = package.Decode(ref reader, context);
             package.SequenceId = sequenceId;
 
             if (!filter.ReceivedHandshake)

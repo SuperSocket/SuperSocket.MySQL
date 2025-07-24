@@ -11,27 +11,29 @@ namespace SuperSocket.MySQL.Packets
         public ushort Warnings { get; set; }
         public string Info { get; set; }
 
-        protected internal override void Decode(ref SequenceReader<byte> reader, object context)
+        protected internal override MySQLPacket Decode(ref SequenceReader<byte> reader, object context)
         {
             // Read affected rows (length-encoded integer)
             AffectedRows = reader.TryReadLengthEncodedInteger(out long affectedRows) ? (ulong)affectedRows : 0;
-            
+
             // Read last insert ID (length-encoded integer)
             LastInsertId = reader.TryReadLengthEncodedInteger(out long lastInsertId) ? (ulong)lastInsertId : 0;
-            
+
             // Read status flags (2 bytes)
             reader.TryReadLittleEndian(out short statusFlags);
             StatusFlags = (ushort)statusFlags;
-            
+
             // Read warnings (2 bytes)
             reader.TryReadLittleEndian(out short warnings);
             Warnings = (ushort)warnings;
-            
+
             // Read info string if remaining data
             if (reader.Remaining > 0)
             {
                 Info = reader.TryReadLengthEncodedString(out string info) ? info : string.Empty;
             }
+            
+            return this;
         }
 
         protected internal override int Encode(IBufferWriter<byte> writer)
