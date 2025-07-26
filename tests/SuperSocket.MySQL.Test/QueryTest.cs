@@ -17,19 +17,9 @@ namespace SuperSocket.MySQL.Test
         [Fact]
         public async Task TestQueryFunctionality()
         {
-            // Check if MySQL is available
-            var host = Environment.GetEnvironmentVariable("MYSQL_HOST") ?? "localhost";
-            var portStr = Environment.GetEnvironmentVariable("MYSQL_PORT") ?? "3306";
-            var username = Environment.GetEnvironmentVariable("MYSQL_USER") ?? "root";
-            var password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? "root";
+            _output.WriteLine($"Testing MySQL connection to {TestConst.Host}:{TestConst.DefaultPort} with user '{TestConst.Username}'");
 
-            if (!int.TryParse(portStr, out int port))
-                port = 3306;
-
-            _output.WriteLine($"Testing MySQL connection to {host}:{port} with user '{username}'");
-
-      
-            var connection = new MySQLConnection(host, port, username, password);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
             // Test connection and authentication
             await connection.ConnectAsync();

@@ -12,28 +12,12 @@ namespace SuperSocket.MySQL.Test
     /// </summary>
     public class MySQLIntegrationTest
     {
-        private readonly string _host;
-        private readonly int _port;
-        private readonly string _username;
-        private readonly string _password;
-        private readonly string _database;
-
-        public MySQLIntegrationTest()
-        {
-            // Configuration can be overridden by environment variables for CI/CD
-            _host = Environment.GetEnvironmentVariable("MYSQL_HOST") ?? "localhost";
-            _port = int.Parse(Environment.GetEnvironmentVariable("MYSQL_PORT") ?? "3306");
-            _username = Environment.GetEnvironmentVariable("MYSQL_USERNAME") ?? "root";
-            _password = Environment.GetEnvironmentVariable("MYSQL_PASSWORD") ?? "password";
-            _database = Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? "test";
-        }
-
         [Fact]
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_CompleteHandshakeFlow_ShouldAuthenticate()
         {
             // Arrange
-            var connection = new MySQLConnection(_host, _port, _username, _password);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
             try
             {
@@ -56,7 +40,7 @@ namespace SuperSocket.MySQL.Test
         public async Task MySQLConnection_InvalidCredentials_ShouldFailHandshake()
         {
             // Arrange
-            var connection = new MySQLConnection(_host, _port, "nonexistent_user", "wrong_password");
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, "nonexistent_user", "wrong_password");
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -82,7 +66,7 @@ namespace SuperSocket.MySQL.Test
                 // Act - Create multiple concurrent connections
                 for (int i = 0; i < connectionCount; i++)
                 {
-                    connections[i] = new MySQLConnection(_host, _port, _username, _password);
+                    connections[i] = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
                     tasks[i] = connections[i].ConnectAsync();
                 }
 
@@ -147,7 +131,7 @@ namespace SuperSocket.MySQL.Test
         public async Task MySQLConnection_HandshakeTimeout_ShouldBeHandled()
         {
             // Skip test if MySQL is not available            // Arrange
-            var connection = new MySQLConnection(_host, _port, _username, _password);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
             using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
 
             try

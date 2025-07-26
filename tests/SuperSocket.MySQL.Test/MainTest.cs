@@ -8,17 +8,12 @@ namespace SuperSocket.MySQL.Test
     public class MainTest
     {
         // Test configuration - these should be set via environment variables or test configuration
-        private const string TestHost = "localhost";
-        private const int TestPort = 3306;
-        private const string TestUsername = "root";
-        private const string TestPassword = "root";
-        private const string TestDatabase = "test";
 
         [Fact]
         public async Task ConnectAsync_WithValidCredentials_ShouldAuthenticateSuccessfully()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, TestPort, TestUsername, TestPassword);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
             try
             {
@@ -39,7 +34,7 @@ namespace SuperSocket.MySQL.Test
         public async Task ConnectAsync_WithInvalidCredentials_ShouldThrowException()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, TestPort, "invalid_user", "invalid_password");
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, "invalid_user", "invalid_password");
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -54,7 +49,7 @@ namespace SuperSocket.MySQL.Test
         public async Task ConnectAsync_WithEmptyPassword_ShouldHandleCorrectly()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, TestPort, TestUsername, "");
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, "");
 
             try
             {
@@ -83,8 +78,8 @@ namespace SuperSocket.MySQL.Test
         public async Task ConnectAsync_MultipleConnections_ShouldWorkIndependently()
         {
             // Arrange
-            var connection1 = new MySQLConnection(TestHost, TestPort, TestUsername, TestPassword);
-            var connection2 = new MySQLConnection(TestHost, TestPort, TestUsername, TestPassword);
+            var connection1 = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
+            var connection2 = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
             try
             {
@@ -108,7 +103,7 @@ namespace SuperSocket.MySQL.Test
         public async Task DisconnectAsync_AfterSuccessfulConnection_ShouldResetAuthenticationState()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, TestPort, TestUsername, TestPassword);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
             await connection.ConnectAsync();
             Assert.True(connection.IsAuthenticated, "Precondition: Connection should be authenticated");
 
@@ -124,7 +119,7 @@ namespace SuperSocket.MySQL.Test
         {
             // Act & Assert
             Assert.Throws<ArgumentNullException>(() => 
-                new MySQLConnection(null, TestPort, TestUsername, TestPassword)
+                new MySQLConnection(null, TestConst.DefaultPort, TestConst.Username, TestConst.Password)
             );
         }
 
@@ -133,7 +128,7 @@ namespace SuperSocket.MySQL.Test
         {
             // Act & Assert
             Assert.Throws<ArgumentNullException>(() => 
-                new MySQLConnection(TestHost, TestPort, null, TestPassword)
+                new MySQLConnection(TestConst.Host, TestConst.DefaultPort, null, TestConst.Password)
             );
         }
 
@@ -142,7 +137,7 @@ namespace SuperSocket.MySQL.Test
         {
             // Act & Assert
             Assert.Throws<ArgumentNullException>(() => 
-                new MySQLConnection(TestHost, TestPort, TestUsername, null)
+                new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, null)
             );
         }
 
@@ -150,7 +145,7 @@ namespace SuperSocket.MySQL.Test
         public async Task ConnectAsync_WithInvalidHost_ShouldThrowException()
         {
             // Arrange
-            var connection = new MySQLConnection("invalid-host-that-does-not-exist", TestPort, TestUsername, TestPassword);
+            var connection = new MySQLConnection("invalid-host-that-does-not-exist", TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
             // Act & Assert
             await Assert.ThrowsAnyAsync<Exception>(async () => await connection.ConnectAsync());
@@ -161,7 +156,7 @@ namespace SuperSocket.MySQL.Test
         public async Task ConnectAsync_WithInvalidPort_ShouldThrowException()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, 12345, TestUsername, TestPassword);
+            var connection = new MySQLConnection(TestConst.Host, 12345, TestConst.Username, TestConst.Password);
 
             // Act & Assert
             await Assert.ThrowsAnyAsync<Exception>(async () => await connection.ConnectAsync());
@@ -172,7 +167,7 @@ namespace SuperSocket.MySQL.Test
         public async Task ExecuteQueryAsync_WithoutAuthentication_ShouldThrowException()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, TestPort, TestUsername, TestPassword);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -186,7 +181,7 @@ namespace SuperSocket.MySQL.Test
         public async Task ExecuteQueryAsync_WithAuthentication_ShouldNotThrow()
         {
             // Arrange
-            var connection = new MySQLConnection(TestHost, TestPort, TestUsername, TestPassword);
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
             await connection.ConnectAsync();
 
             try
