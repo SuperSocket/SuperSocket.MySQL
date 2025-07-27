@@ -30,13 +30,14 @@ namespace SuperSocket.MySQL
             reader.Advance(3); // Skip the first 3 bytes of the header
             reader.TryRead(out var sequenceId); // Read the sequence ID
 
-            var filter = context as MySQLPacketFilter;
+            var filterContext = context as MySQLFilterContext;
 
             var packetType = -1;
 
             // Read the first byte to determine packet type
-            if (filter.ReceivedHandshake)
+            if (filterContext.State != MySQLConnectionState.Initial)
             {
+                // In handshake state, we expect the first byte to be the packet type
                 if (!reader.TryRead(out var packetTypeByte))
                     return null;
 
@@ -48,8 +49,10 @@ namespace SuperSocket.MySQL
             package = package.Decode(ref reader, context);
             package.SequenceId = sequenceId;
 
-            if (!filter.ReceivedHandshake)
-                filter.ReceivedHandshake = true;
+            if (filterContext.State == MySQLConnectionState.Initial)
+            {
+                filterContext.State = MySQLConnectionState.HandshakeInitiated;
+            }
 
             return package;
         }

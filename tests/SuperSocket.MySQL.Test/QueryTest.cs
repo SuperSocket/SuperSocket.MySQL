@@ -62,7 +62,7 @@ namespace SuperSocket.MySQL.Test
             {
                 var insertDataResult = await connection.ExecuteQueryAsync("INSERT INTO test_table (id, name) VALUES (1, 'Test')");
                 Assert.NotNull(insertDataResult);
-                _output.WriteLine($"INSERT result - Success: {insertDataResult.IsSuccess}, Affected rows: {insertDataResult.AffectedRows}");
+                //_output.WriteLine($"INSERT result - Success: {insertDataResult.IsSuccess}, Affected rows: {insertDataResult.AffectedRows}");
             }
 
             await connection.DisconnectAsync();

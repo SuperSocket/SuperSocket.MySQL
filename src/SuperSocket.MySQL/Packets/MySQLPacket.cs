@@ -15,5 +15,7 @@ namespace SuperSocket.MySQL
         protected internal abstract MySQLPacket Decode(ref SequenceReader<byte> reader, object context);
 
         protected internal abstract int Encode(IBufferWriter<byte> writer);
+
+        internal virtual bool IsPartialPacket => false;
     }
 }

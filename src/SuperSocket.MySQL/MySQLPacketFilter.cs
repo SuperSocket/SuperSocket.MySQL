@@ -8,13 +8,11 @@ namespace SuperSocket.MySQL
     {
         private const int headerSize = 4; // MySQL package header size is 4 bytes
 
-        internal bool ReceivedHandshake { get; set; }
-
         public MySQLPacketFilter(IPackageDecoder<MySQLPacket> decoder)
             : base(headerSize)
         {
             this.Decoder = decoder ?? throw new ArgumentNullException(nameof(decoder));
-            this.Context = this;
+            this.Context = new MySQLFilterContext();
         }
 
         protected override int GetBodyLengthFromHeader(ref ReadOnlySequence<byte> buffer)
@@ -26,6 +24,20 @@ namespace SuperSocket.MySQL
             reader.TryRead(out byte byte2);
 
             return byte2 * 256 * 256 + byte1 * 256 + byte0;
+        }
+
+        public override MySQLPacket Filter(ref SequenceReader<byte> reader)
+        {
+            var packet = base.Filter(ref reader);
+
+            if (packet == null || packet.IsPartialPacket)
+            {
+                // If the packet is null or a partial packet, we cannot return it yet
+                // We will wait for more data to complete the packet
+                return null;
+            }
+
+            return packet;
         }
     }
 }

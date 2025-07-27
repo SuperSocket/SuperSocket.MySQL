@@ -32,6 +32,7 @@ namespace SuperSocket.MySQL.Packets
             // Read catalog (length-encoded string)
             if (!reader.TryReadLengthEncodedString(out string catalog))
                 throw new InvalidOperationException("Failed to read catalog");
+
             Catalog = catalog;
 
             // Read schema (length-encoded string)
@@ -89,6 +90,18 @@ namespace SuperSocket.MySQL.Packets
 
             // Skip the two null bytes that follow
             reader.Advance(2);
+
+            var filterContext = context as MySQLFilterContext;
+            filterContext.ColumnDefinitionPackets.Add(this);
+
+            if (filterContext.QueryResultColumnCount > filterContext.ColumnDefinitionPackets.Count)
+            {
+                filterContext.NextPacket = new ColumnDefinitionPacket();
+            }
+            else
+            {
+                filterContext.NextPacket = new ResultRowsPacket();
+            }
 
             return this;
         }
@@ -156,5 +169,7 @@ namespace SuperSocket.MySQL.Packets
 
             return bytesWritten;
         }
+
+        internal override bool IsPartialPacket => true;
     }
 }
