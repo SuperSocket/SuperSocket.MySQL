@@ -44,7 +44,7 @@ namespace SuperSocket.MySQL.Packets
         /// <summary>
         /// Gets the number of columns in the result set.
         /// </summary>
-        public int ColumnCount { get; set; }
+        public int ColumnCount => Columns?.Count ?? 0;
 
         /// <summary>
         /// Initializes a new instance of the QueryResultPacket class.
@@ -81,8 +81,8 @@ namespace SuperSocket.MySQL.Packets
             return new QueryResultPacket
             {
                 ErrorCode = 0,
-                Columns = columns,
-                Rows = rows
+                Columns = columns ?? Array.Empty<ColumnDefinitionPacket>(),
+                Rows = rows ?? Array.Empty<IReadOnlyList<string>>()
             };
         }
 

@@ -191,8 +191,22 @@ namespace SuperSocket.MySQL.Test
 
                 // Assert
                 Assert.NotNull(result);
-                // Note: Since ExecuteQueryAsync is a placeholder implementation, 
-                // we're just verifying it doesn't throw when authenticated
+                // Verify that the result has a proper structure
+                Assert.True(result.IsSuccess || result.ErrorCode != 0, 
+                    "Result should either be successful or have a proper error code");
+                
+                if (result.IsSuccess)
+                {
+                    Assert.Equal(0, result.ErrorCode);
+                    Assert.Null(result.ErrorMessage);
+                    Assert.True(result.ColumnCount >= 0, "Column count should be non-negative");
+                    Assert.True(result.RowCount >= 0, "Row count should be non-negative");
+                }
+                else
+                {
+                    Assert.NotEqual(0, result.ErrorCode);
+                    Assert.NotNull(result.ErrorMessage);
+                }
             }
             finally
             {
