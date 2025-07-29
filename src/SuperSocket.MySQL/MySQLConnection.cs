@@ -67,9 +67,10 @@ namespace SuperSocket.MySQL
             // Prepare handshake response
             var handshakeResponse = new HandshakeResponsePacket
             {
-                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
-                                       ClientCapabilities.CLIENT_SECURE_CONNECTION |
-                                       ClientCapabilities.CLIENT_PLUGIN_AUTH),
+                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41
+                                       | ClientCapabilities.CLIENT_SECURE_CONNECTION
+                                       | ClientCapabilities.CLIENT_PLUGIN_AUTH
+                                       | ClientCapabilities.CLIENT_DEPRECATE_EOF),
                 MaxPacketSize = 16777216, // 16MB
                 CharacterSet = 0x21, // utf8_general_ci
                 Username = _userName,
@@ -100,6 +101,7 @@ namespace SuperSocket.MySQL
                         ? errorPacket.ErrorMessage
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
+                /*
                 case EOFPacket eofPacket:
                     // EOF packet received, check if it indicates success
                     if ((eofPacket.StatusFlags & 0x0002) != 0)
@@ -112,6 +114,7 @@ namespace SuperSocket.MySQL
                     {
                         throw new InvalidOperationException("Authentication failed: EOF packet received without success status. Length: " + eofPacket.Length);
                     }
+                    */
                 default:
                     throw new InvalidOperationException($"Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
             }
