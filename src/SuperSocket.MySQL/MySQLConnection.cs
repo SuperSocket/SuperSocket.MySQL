@@ -67,9 +67,10 @@ namespace SuperSocket.MySQL
             // Prepare handshake response
             var handshakeResponse = new HandshakeResponsePacket
             {
-                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
-                                       ClientCapabilities.CLIENT_SECURE_CONNECTION |
-                                       ClientCapabilities.CLIENT_PLUGIN_AUTH),
+                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41
+                                       | ClientCapabilities.CLIENT_SECURE_CONNECTION
+                                       | ClientCapabilities.CLIENT_PLUGIN_AUTH
+                                       | ClientCapabilities.CLIENT_DEPRECATE_EOF),
                 MaxPacketSize = 16777216, // 16MB
                 CharacterSet = 0x21, // utf8_general_ci
                 Username = _userName,
