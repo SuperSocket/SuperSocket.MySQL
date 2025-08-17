@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using SuperSocket.MySQL;
+using Microsoft.Extensions.Logging;
+using Meziantou.Extensions.Logging.Xunit.v3;
 
 namespace SuperSocket.MySQL.Test
 {
@@ -12,6 +14,13 @@ namespace SuperSocket.MySQL.Test
     /// </summary>
     public class MySQLIntegrationTest
     {
+        private protected readonly ITestOutputHelper outputHelper;
+
+        public MySQLIntegrationTest(ITestOutputHelper outputHelper)
+        {
+            this.outputHelper = outputHelper;
+        }
+
         [Fact]
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_CompleteHandshakeFlow_ShouldAuthenticate()
@@ -40,7 +49,10 @@ namespace SuperSocket.MySQL.Test
         public async Task MySQLConnection_InvalidCredentials_ShouldFailHandshake()
         {
             // Arrange
-            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, "nonexistent_user", "wrong_password");
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(new XUnitLoggerProvider(this.outputHelper));
+            
+            var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, "nonexistent_user", "wrong_password", loggerFactory.CreateLogger(nameof(MySQLConnection_InvalidCredentials_ShouldFailHandshake)));
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(

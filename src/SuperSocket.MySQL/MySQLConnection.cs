@@ -30,7 +30,7 @@ namespace SuperSocket.MySQL
         private readonly MySQLFilterContext filterContext;
 
         public MySQLConnection(string host, int port, string userName, string password, ILogger logger = null)
-            : this(new MySQLPacketFilter(MySQLPacketDecoder.ClientInstance), logger)
+            : this(new MySQLPacketFilter(new MySQLPacketDecoder(MySQLPacketFactory.ClientInstance, logger)), logger)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _port = port > 0 ? port : DefaultPort;
