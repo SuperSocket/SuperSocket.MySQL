@@ -14,7 +14,7 @@ namespace SuperSocket.MySQL
         public MySQLPacketDecoder(IMySQLPacketFactory packetFactory, ILogger logger)
         {
             _packetFactory = packetFactory ?? throw new ArgumentNullException(nameof(packetFactory));
-            this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            this._logger = logger;
         }
 
         public MySQLPacket Decode(ref ReadOnlySequence<byte> buffer, object context)
@@ -41,8 +41,8 @@ namespace SuperSocket.MySQL
                 packetType = (int)packetTypeByte;
             }
 
-            _logger.LogDebug("Decoding MySQL packet with sequence ID {SequenceId} and type {PacketType}", sequenceId, packetType);
-            
+            _logger?.LogDebug("Decoding MySQL packet with sequence ID {SequenceId} and type {PacketType}", sequenceId, packetType);
+
             var package = _packetFactory.Create(packetType);
 
             package = package.Decode(ref reader, context);
