@@ -1,23 +1,20 @@
 using System;
 using System.Buffers;
 using System.IO;
+using Microsoft.Extensions.Logging;
 using SuperSocket.ProtoBase;
 
 namespace SuperSocket.MySQL
 {
     internal class MySQLPacketDecoder : IPackageDecoder<MySQLPacket>
     {
-        public static MySQLPacketDecoder ClientInstance { get; }
-        static MySQLPacketDecoder()
-        {
-            ClientInstance = new MySQLPacketDecoder(MySQLPacketFactory.ClientInstance);
-        }
-
+        private readonly ILogger _logger;
         private readonly IMySQLPacketFactory _packetFactory;
 
-        private MySQLPacketDecoder(IMySQLPacketFactory packetFactory)
+        public MySQLPacketDecoder(IMySQLPacketFactory packetFactory, ILogger logger)
         {
             _packetFactory = packetFactory ?? throw new ArgumentNullException(nameof(packetFactory));
+            this._logger = logger;
         }
 
         public MySQLPacket Decode(ref ReadOnlySequence<byte> buffer, object context)
@@ -43,6 +40,8 @@ namespace SuperSocket.MySQL
 
                 packetType = (int)packetTypeByte;
             }
+
+            _logger?.LogDebug("Decoding MySQL packet with sequence ID {SequenceId} and type {PacketType}", sequenceId, packetType);
 
             var package = _packetFactory.Create(packetType);
 

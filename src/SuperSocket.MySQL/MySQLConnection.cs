@@ -30,7 +30,7 @@ namespace SuperSocket.MySQL
         private readonly MySQLFilterContext filterContext;
 
         public MySQLConnection(string host, int port, string userName, string password, ILogger logger = null)
-            : this(new MySQLPacketFilter(MySQLPacketDecoder.ClientInstance), logger)
+            : this(new MySQLPacketFilter(new MySQLPacketDecoder(MySQLPacketFactory.ClientInstance, logger)), logger)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _port = port > 0 ? port : DefaultPort;
@@ -67,9 +67,10 @@ namespace SuperSocket.MySQL
             // Prepare handshake response
             var handshakeResponse = new HandshakeResponsePacket
             {
-                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41 |
-                                       ClientCapabilities.CLIENT_SECURE_CONNECTION |
-                                       ClientCapabilities.CLIENT_PLUGIN_AUTH),
+                CapabilityFlags = (uint)(ClientCapabilities.CLIENT_PROTOCOL_41
+                                       | ClientCapabilities.CLIENT_SECURE_CONNECTION
+                                       | ClientCapabilities.CLIENT_PLUGIN_AUTH
+                                       | ClientCapabilities.CLIENT_DEPRECATE_EOF),
                 MaxPacketSize = 16777216, // 16MB
                 CharacterSet = 0x21, // utf8_general_ci
                 Username = _userName,
@@ -100,6 +101,7 @@ namespace SuperSocket.MySQL
                         ? errorPacket.ErrorMessage
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
+                
                 case EOFPacket eofPacket:
                     // EOF packet received, check if it indicates success
                     if ((eofPacket.StatusFlags & 0x0002) != 0)

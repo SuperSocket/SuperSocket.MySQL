@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using SuperSocket.MySQL.Packets;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SuperSocket.MySQL.Test
 {
