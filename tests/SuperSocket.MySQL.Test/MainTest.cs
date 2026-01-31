@@ -41,13 +41,7 @@ namespace SuperSocket.MySQL.Test
                 async () => await connection.ConnectAsync()
             );
 
-            // The exception message should indicate either:
-            // - authentication failed (when MySQL is running but credentials are wrong)
-            // - connection failed (when MySQL is not running)
-            var lowerMessage = exception.Message.ToLower();
-            Assert.True(
-                lowerMessage.Contains("authentication failed") || lowerMessage.Contains("failed to connect"),
-                $"Expected 'authentication failed' or 'failed to connect' but got: {exception.Message}");
+            Assert.Contains("authentication failed", exception.Message.ToLower());
             Assert.False(connection.IsAuthenticated, "Connection should not be authenticated after failed handshake");
         }
 
