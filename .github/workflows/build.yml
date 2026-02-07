@@ -34,6 +34,7 @@ jobs:
                 cp tests/SuperSocket.MySQL.Test/mysql.cnf ~/.my.cnf
                 sudo systemctl start mysql.service
                 mysql -V
+                mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root'; FLUSH PRIVILEGES;"
             - name: Test
               run: |
                 cd tests/SuperSocket.MySQL.Test
