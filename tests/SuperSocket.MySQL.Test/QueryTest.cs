@@ -30,15 +30,8 @@ namespace SuperSocket.MySQL.Test
         #region SELECT Query Tests
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_SelectSingleColumn_ShouldReturnCorrectStructure()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             _output.WriteLine($"Testing MySQL SELECT query to {TestConst.Host}:{TestConst.DefaultPort} with user '{TestConst.Username}'");
 
@@ -94,15 +87,8 @@ namespace SuperSocket.MySQL.Test
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_SelectMultipleColumns_ShouldReturnCorrectStructure()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
@@ -156,15 +142,8 @@ namespace SuperSocket.MySQL.Test
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_SelectWithDifferentDataTypes_ShouldHandleCorrectly()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = await CreateAuthenticatedConnectionAsync();
 
@@ -219,15 +198,8 @@ namespace SuperSocket.MySQL.Test
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_EmptyResultSet_ShouldHandleCorrectly()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
@@ -274,15 +246,8 @@ namespace SuperSocket.MySQL.Test
         [InlineData("SELECT 'hello'")]
         [InlineData("SELECT NOW()")]
         [InlineData("SELECT 1, 2, 3")]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_VariousSelectQueries_ShouldNotThrow(string query)
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = await CreateAuthenticatedConnectionAsync();
 
@@ -346,15 +311,8 @@ namespace SuperSocket.MySQL.Test
         #region Non-SELECT Query Tests
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_SimpleStatement_ShouldReturnOKResult()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
@@ -394,15 +352,8 @@ namespace SuperSocket.MySQL.Test
         #region Error Handling Tests
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_InvalidQuery_ShouldReturnError()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
@@ -443,15 +394,8 @@ namespace SuperSocket.MySQL.Test
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_NullOrEmptyQuery_ShouldThrowException()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
@@ -484,15 +428,8 @@ namespace SuperSocket.MySQL.Test
         #region String Formatting Tests
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryStringAsync_SelectQuery_ShouldReturnFormattedString()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
 
@@ -518,15 +455,8 @@ namespace SuperSocket.MySQL.Test
         }
 
         [Fact]
-        [Trait("Category", "Integration")]
         public async Task ExecuteQueryStringAsync_ShouldFormatResultsReadably()
         {
-            if (!TestConst.IsMySQLAvailable)
-            {
-                _output.WriteLine("MySQL server is not available, skipping test");
-                return;
-            }
-
             // Arrange
             var connection = await CreateAuthenticatedConnectionAsync();
 
