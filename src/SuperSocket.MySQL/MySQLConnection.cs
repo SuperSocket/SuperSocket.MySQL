@@ -78,14 +78,48 @@ namespace SuperSocket.MySQL
             };
 
             // Generate authentication response
-            handshakeResponse.AuthResponse = GenerateAuthResponse(handshakePacket);
+            handshakeResponse.AuthResponse = GenerateAuthResponse(handshakePacket.AuthPluginDataPart1, handshakePacket.AuthPluginDataPart2);
             handshakeResponse.SequenceId = packet.SequenceId + 1;
 
             // Send handshake response
             await SendAsync(PacketEncoder, handshakeResponse).ConfigureAwait(false);
 
-            // Wait for authentication result (OK packet or Error packet)
+            // Wait for authentication result (OK packet, Error packet, or AuthSwitchRequest)
             var authResult = await ReceiveAsync().ConfigureAwait(false);
+
+            // Handle auth switch if requested
+            while (authResult is AuthSwitchRequestPacket authSwitchRequest)
+            {
+                // Generate new auth response using the switched plugin's auth data
+                byte[] authResponse;
+                
+                if (authSwitchRequest.PluginName == "mysql_native_password")
+                {
+                    // Use mysql_native_password algorithm
+                    authResponse = GenerateNativePasswordResponse(authSwitchRequest.AuthData);
+                }
+                else if (authSwitchRequest.PluginName == "caching_sha2_password")
+                {
+                    // Use caching_sha2_password algorithm (same as mysql_native_password for the initial response)
+                    authResponse = GenerateCachingSha2Response(authSwitchRequest.AuthData);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unsupported authentication plugin: {authSwitchRequest.PluginName}");
+                }
+
+                // Send auth switch response
+                var authSwitchResponse = new AuthSwitchResponsePacket
+                {
+                    AuthData = authResponse,
+                    SequenceId = authSwitchRequest.SequenceId + 1
+                };
+
+                await SendAsync(PacketEncoder, authSwitchResponse).ConfigureAwait(false);
+
+                // Wait for next response
+                authResult = await ReceiveAsync().ConfigureAwait(false);
+            }
 
             switch (authResult)
             {
@@ -101,26 +135,46 @@ namespace SuperSocket.MySQL
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
                 case EOFPacket eofPacket:
-                    // EOF packet received, check if it indicates success
-                    if ((eofPacket.StatusFlags & 0x0002) != 0)
-                    {
-                        IsAuthenticated = true;
-                        filterContext.State = MySQLConnectionState.Authenticated;
-                        break;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("Authentication failed: EOF packet received without success status. Length: " + eofPacket.Length);
-                    }
+                    // EOF packet during authentication indicates a protocol error
+                    throw new InvalidOperationException("MySQL authentication failed: Unexpected EOF packet received during authentication.");
                 default:
                     throw new InvalidOperationException($"Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
             }
         }
 
-        private byte[] GenerateAuthResponse(HandshakePacket handshakePacket)
+        private byte[] GenerateAuthResponse(byte[] authPluginDataPart1, byte[] authPluginDataPart2)
         {
             if (string.IsNullOrEmpty(_password))
                 return Array.Empty<byte>();
+
+            // Combine auth data parts to get the full salt
+            var saltLength = authPluginDataPart1.Length;
+            if (authPluginDataPart2 != null)
+            {
+                saltLength += Math.Min(authPluginDataPart2.Length, 12);
+            }
+
+            var salt = new byte[saltLength];
+            Array.Copy(authPluginDataPart1, 0, salt, 0, authPluginDataPart1.Length);
+            
+            if (authPluginDataPart2 != null)
+            {
+                var part2Length = Math.Min(authPluginDataPart2.Length, 12);
+                Array.Copy(authPluginDataPart2, 0, salt, authPluginDataPart1.Length, part2Length);
+            }
+
+            return GenerateNativePasswordResponse(salt);
+        }
+
+        private byte[] GenerateNativePasswordResponse(byte[] salt)
+        {
+            if (string.IsNullOrEmpty(_password))
+                return Array.Empty<byte>();
+
+            // Remove trailing null if present (MySQL sends 20-byte salt with null terminator)
+            var saltLength = salt.Length;
+            if (saltLength > 0 && salt[saltLength - 1] == 0)
+                saltLength--;
 
             // MySQL native password authentication algorithm:
             // SHA1(password) XOR SHA1(salt + SHA1(SHA1(password)))
@@ -130,23 +184,50 @@ namespace SuperSocket.MySQL
                 var sha1Password = sha1.ComputeHash(passwordBytes);
                 var sha1Sha1Password = sha1.ComputeHash(sha1Password);
 
-                sha1.TransformBlock(handshakePacket.AuthPluginDataPart1, 0, handshakePacket.AuthPluginDataPart1.Length, null, 0);
-
-                if (handshakePacket.AuthPluginDataPart2 != null)
-                {
-                    var part2Length = Math.Min(handshakePacket.AuthPluginDataPart2.Length, 12);
-                    sha1.TransformBlock(handshakePacket.AuthPluginDataPart2, 0, part2Length, null, 0);
-                }
-
+                sha1.TransformBlock(salt, 0, saltLength, null, 0);
                 sha1.TransformFinalBlock(sha1Sha1Password, 0, sha1Sha1Password.Length);
 
                 var sha1Combined = sha1.Hash;
 
                 var result = new byte[sha1Password.Length];
-
                 for (int i = 0; i < sha1Password.Length; i++)
                 {
                     result[i] = (byte)(sha1Password[i] ^ sha1Combined[i]);
+                }
+
+                return result;
+            }
+        }
+
+        private byte[] GenerateCachingSha2Response(byte[] salt)
+        {
+            if (string.IsNullOrEmpty(_password))
+                return Array.Empty<byte>();
+
+            // Remove trailing null if present (MySQL sends salt with null terminator)
+            var saltLength = salt.Length;
+            if (saltLength > 0 && salt[saltLength - 1] == 0)
+                saltLength--;
+
+            // caching_sha2_password uses SHA256 instead of SHA1:
+            // SHA256(password) XOR SHA256(SHA256(SHA256(password)) + salt)
+            using (var sha256 = SHA256.Create())
+            {
+                var passwordBytes = Encoding.UTF8.GetBytes(_password);
+                var sha256Password = sha256.ComputeHash(passwordBytes);
+                var sha256Sha256Password = sha256.ComputeHash(sha256Password);
+
+                // Compute SHA256(SHA256(SHA256(password)) + salt)
+                var hashAndSalt = new byte[sha256Sha256Password.Length + saltLength];
+                Array.Copy(sha256Sha256Password, 0, hashAndSalt, 0, sha256Sha256Password.Length);
+                Array.Copy(salt, 0, hashAndSalt, sha256Sha256Password.Length, saltLength);
+                var sha256Combined = sha256.ComputeHash(hashAndSalt);
+
+                // XOR the results
+                var result = new byte[sha256Password.Length];
+                for (int i = 0; i < sha256Password.Length; i++)
+                {
+                    result[i] = (byte)(sha256Password[i] ^ sha256Combined[i]);
                 }
 
                 return result;

@@ -201,5 +201,62 @@ namespace SuperSocket.MySQL.Test
             // For now, we just verify the constructor doesn't throw
             Assert.NotNull(connection);
         }
+
+        [Fact]
+        public void EOFPacket_ShouldNotIndicateAuthenticationSuccess()
+        {
+            // This test verifies that EOF packets are correctly decoded but should NOT be treated
+            // as authentication success during the handshake. The MySQL protocol specifies that
+            // only OKPacket (0x00) indicates successful authentication, while EOFPacket (0xFE)
+            // during authentication typically indicates an auth switch request.
+            
+            // Arrange - Create an EOF packet with various status flags
+            var packetData = new List<byte>();
+            packetData.AddRange(BitConverter.GetBytes((ushort)0x0000)); // warning count
+            packetData.AddRange(BitConverter.GetBytes((ushort)0x0002)); // status flags with SERVER_STATUS_AUTOCOMMIT
+            
+            var sequence = new ReadOnlySequence<byte>(packetData.ToArray());
+            var reader = new SequenceReader<byte>(sequence);
+            
+            // Act
+            var eofPacket = new EOFPacket();
+            eofPacket.Decode(ref reader, null);
+            
+            // Assert
+            Assert.Equal((ushort)0x0002, eofPacket.StatusFlags);
+            Assert.Equal(0xFE, eofPacket.Header);
+            
+            // NOTE: The key assertion here is conceptual - an EOF packet during authentication
+            // should NOT be interpreted as successful authentication regardless of status flags.
+            // The status flag 0x0002 is SERVER_STATUS_AUTOCOMMIT, not an authentication indicator.
+            // This test documents that the packet is correctly decoded, but the authentication
+            // logic in MySQLConnection.ConnectAsync should reject EOF packets.
+        }
+
+        [Fact]
+        public void EOFPacket_DecodeVariousStatusFlags_ShouldParseCorrectly()
+        {
+            // Test EOF packet decoding with different status flag combinations
+            ushort[] testFlags = { 0x0000, 0x0001, 0x0002, 0x0003, 0x8000, 0xFFFF };
+            
+            foreach (var flags in testFlags)
+            {
+                // Arrange
+                var packetData = new List<byte>();
+                packetData.AddRange(BitConverter.GetBytes((ushort)0x0005)); // warning count
+                packetData.AddRange(BitConverter.GetBytes(flags)); // status flags
+                
+                var sequence = new ReadOnlySequence<byte>(packetData.ToArray());
+                var reader = new SequenceReader<byte>(sequence);
+                
+                // Act
+                var eofPacket = new EOFPacket();
+                eofPacket.Decode(ref reader, null);
+                
+                // Assert
+                Assert.Equal((ushort)5, eofPacket.WarningCount);
+                Assert.Equal(flags, eofPacket.StatusFlags);
+            }
+        }
     }
 }

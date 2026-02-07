@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.IO;
+using SuperSocket.MySQL.Packets;
 using SuperSocket.ProtoBase;
 
 namespace SuperSocket.MySQL
@@ -44,7 +45,28 @@ namespace SuperSocket.MySQL
                 packetType = (int)packetTypeByte;
             }
 
-            var package = _packetFactory.Create(packetType);
+            MySQLPacket package;
+
+            // Special handling for 0xFE during authentication phase
+            // During HandshakeInitiated state, 0xFE means AuthSwitchRequest, not EOF
+            if (packetType == 0xFE && filterContext.State == MySQLConnectionState.HandshakeInitiated)
+            {
+                // Check if this is an AuthSwitchRequest (longer than 4 bytes) or a real EOF (4 bytes)
+                // EOF packet has exactly 4 bytes (2 bytes warning count + 2 bytes status flags)
+                // AuthSwitchRequest has variable length (plugin name + auth data)
+                if (reader.Remaining > 4)
+                {
+                    package = new AuthSwitchRequestPacket();
+                }
+                else
+                {
+                    package = _packetFactory.Create(packetType);
+                }
+            }
+            else
+            {
+                package = _packetFactory.Create(packetType);
+            }
 
             package = package.Decode(ref reader, context);
             package.SequenceId = sequenceId;
