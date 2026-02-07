@@ -11,6 +11,15 @@ on:
 jobs:
     build:
         runs-on: ubuntu-latest
+        services:
+          mysql:
+            image: mysql:8.0
+            env:
+              MYSQL_ROOT_PASSWORD: root
+              MYSQL_DATABASE: test
+            ports:
+              - 3306:3306
+            options: --health-cmd="mysqladmin ping --silent" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - uses: actions/checkout@v1
             - name: Setup .NET Core
@@ -29,12 +38,9 @@ jobs:
                 dotnet nuget locals all --clear
             - name: Build
               run: dotnet build -c Debug
-            - name: Run MySQL
+            - name: Setup MySQL auth
               run: |
-                cp tests/SuperSocket.MySQL.Test/mysql.cnf ~/.my.cnf
-                sudo systemctl start mysql.service
-                mysql -V
-                sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root'; FLUSH PRIVILEGES;"
+                mysql -h 127.0.0.1 -u root -proot -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root'; FLUSH PRIVILEGES;"
             - name: Test
               run: |
                 cd tests/SuperSocket.MySQL.Test
