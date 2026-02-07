@@ -9,7 +9,7 @@ namespace SuperSocket.MySQL.Test
     {
         // Test configuration - these should be set via environment variables or test configuration
 
-        [Fact(Skip = null)]
+        [Fact]
         [Trait("Category", "Integration")]
         public async Task ConnectAsync_WithValidCredentials_ShouldAuthenticateSuccessfully()
         {
@@ -36,7 +36,7 @@ namespace SuperSocket.MySQL.Test
             }
         }
 
-        [Fact(Skip = null)]
+        [Fact]
         [Trait("Category", "Integration")]
         public async Task ConnectAsync_WithInvalidCredentials_ShouldThrowException()
         {
@@ -57,7 +57,7 @@ namespace SuperSocket.MySQL.Test
             Assert.False(connection.IsAuthenticated, "Connection should not be authenticated after failed handshake");
         }
 
-        [Fact(Skip = null)]
+        [Fact]
         [Trait("Category", "Integration")]
         public async Task ConnectAsync_WithEmptyPassword_ShouldHandleCorrectly()
         {
@@ -92,7 +92,7 @@ namespace SuperSocket.MySQL.Test
             }
         }
 
-        [Fact(Skip = null)]
+        [Fact]
         [Trait("Category", "Integration")]
         public async Task ConnectAsync_MultipleConnections_ShouldWorkIndependently()
         {
@@ -123,7 +123,7 @@ namespace SuperSocket.MySQL.Test
             }
         }
 
-        [Fact(Skip = null)]
+        [Fact]
         [Trait("Category", "Integration")]
         public async Task DisconnectAsync_AfterSuccessfulConnection_ShouldResetAuthenticationState()
         {
@@ -209,7 +209,7 @@ namespace SuperSocket.MySQL.Test
             Assert.Contains("not authenticated", exception.Message);
         }
 
-        [Fact(Skip = null)]
+        [Fact]
         [Trait("Category", "Integration")]
         public async Task ExecuteQueryAsync_WithAuthentication_ShouldNotThrow()
         {
