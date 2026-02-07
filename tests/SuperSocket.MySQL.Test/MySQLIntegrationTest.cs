@@ -134,7 +134,7 @@ namespace SuperSocket.MySQL.Test
         [Trait("Category", "Integration")]
         public async Task MySQLConnection_HandshakeTimeout_ShouldBeHandled()
         {
-            // Skip test if MySQL is not available            // Arrange
+            // Arrange
             var connection = new MySQLConnection(TestConst.Host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
             using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
 
