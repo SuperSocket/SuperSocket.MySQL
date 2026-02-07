@@ -147,35 +147,23 @@ namespace SuperSocket.MySQL
             if (string.IsNullOrEmpty(_password))
                 return Array.Empty<byte>();
 
-            // MySQL native password authentication algorithm:
-            // SHA1(password) XOR SHA1(salt + SHA1(SHA1(password)))
-            using (var sha1 = SHA1.Create())
+            // Combine auth data parts to get the full salt
+            var saltLength = authPluginDataPart1.Length;
+            if (authPluginDataPart2 != null)
             {
-                var passwordBytes = Encoding.UTF8.GetBytes(_password);
-                var sha1Password = sha1.ComputeHash(passwordBytes);
-                var sha1Sha1Password = sha1.ComputeHash(sha1Password);
-
-                sha1.TransformBlock(authPluginDataPart1, 0, authPluginDataPart1.Length, null, 0);
-
-                if (authPluginDataPart2 != null)
-                {
-                    var part2Length = Math.Min(authPluginDataPart2.Length, 12);
-                    sha1.TransformBlock(authPluginDataPart2, 0, part2Length, null, 0);
-                }
-
-                sha1.TransformFinalBlock(sha1Sha1Password, 0, sha1Sha1Password.Length);
-
-                var sha1Combined = sha1.Hash;
-
-                var result = new byte[sha1Password.Length];
-
-                for (int i = 0; i < sha1Password.Length; i++)
-                {
-                    result[i] = (byte)(sha1Password[i] ^ sha1Combined[i]);
-                }
-
-                return result;
+                saltLength += Math.Min(authPluginDataPart2.Length, 12);
             }
+
+            var salt = new byte[saltLength];
+            Array.Copy(authPluginDataPart1, 0, salt, 0, authPluginDataPart1.Length);
+            
+            if (authPluginDataPart2 != null)
+            {
+                var part2Length = Math.Min(authPluginDataPart2.Length, 12);
+                Array.Copy(authPluginDataPart2, 0, salt, authPluginDataPart1.Length, part2Length);
+            }
+
+            return GenerateNativePasswordResponse(salt);
         }
 
         private byte[] GenerateNativePasswordResponse(byte[] salt)
@@ -216,6 +204,11 @@ namespace SuperSocket.MySQL
             if (string.IsNullOrEmpty(_password))
                 return Array.Empty<byte>();
 
+            // Remove trailing null if present (MySQL sends salt with null terminator)
+            var saltLength = salt.Length;
+            if (saltLength > 0 && salt[saltLength - 1] == 0)
+                saltLength--;
+
             // caching_sha2_password uses SHA256 instead of SHA1:
             // SHA256(password) XOR SHA256(SHA256(SHA256(password)) + salt)
             using (var sha256 = SHA256.Create())
@@ -225,9 +218,9 @@ namespace SuperSocket.MySQL
                 var sha256Sha256Password = sha256.ComputeHash(sha256Password);
 
                 // Compute SHA256(SHA256(SHA256(password)) + salt)
-                var hashAndSalt = new byte[sha256Sha256Password.Length + salt.Length];
+                var hashAndSalt = new byte[sha256Sha256Password.Length + saltLength];
                 Array.Copy(sha256Sha256Password, 0, hashAndSalt, 0, sha256Sha256Password.Length);
-                Array.Copy(salt, 0, hashAndSalt, sha256Sha256Password.Length, salt.Length);
+                Array.Copy(salt, 0, hashAndSalt, sha256Sha256Password.Length, saltLength);
                 var sha256Combined = sha256.ComputeHash(hashAndSalt);
 
                 // XOR the results
