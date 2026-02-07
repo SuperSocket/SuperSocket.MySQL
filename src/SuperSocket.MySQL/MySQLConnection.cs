@@ -101,17 +101,9 @@ namespace SuperSocket.MySQL
                         : "Authentication failed";
                     throw new InvalidOperationException($"MySQL authentication failed: {errorMsg} (Error {errorPacket.ErrorCode})");
                 case EOFPacket eofPacket:
-                    // EOF packet received, check if it indicates success
-                    if ((eofPacket.StatusFlags & 0x0002) != 0)
-                    {
-                        IsAuthenticated = true;
-                        filterContext.State = MySQLConnectionState.Authenticated;
-                        break;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("Authentication failed: EOF packet received without success status. Length: " + eofPacket.Length);
-                    }
+                    // EOF packet during authentication indicates an auth switch request or protocol error
+                    // It should NOT be treated as successful authentication
+                    throw new InvalidOperationException("MySQL authentication failed: Unexpected EOF packet received during authentication. This may indicate an unsupported authentication method.");
                 default:
                     throw new InvalidOperationException($"Unexpected packet received during authentication: {authResult?.GetType().Name ?? "null"}");
             }
