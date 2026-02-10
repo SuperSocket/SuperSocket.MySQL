@@ -1,6 +1,8 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
@@ -200,6 +202,41 @@ namespace SuperSocket.MySQL.Test
             // In a real scenario, you might make it internal and use InternalsVisibleTo attribute
             // For now, we just verify the constructor doesn't throw
             Assert.NotNull(connection);
+        }
+
+        [Fact]
+        public void MySQLConnection_GenerateCachingSha2Response_ShouldMatchExpected()
+        {
+            // Arrange
+            const string password = "test_password";
+            var connection = new MySQLConnection("localhost", 3306, "user", password);
+            var salt = new byte[] { 0x33, 0x21, 0x55, 0x42, 0x19, 0x76, 0xA1, 0x0B, 0x10, 0x5C, 0x2D, 0x48, 0x5A, 0x00 };
+            var method = typeof(MySQLConnection).GetMethod("GenerateCachingSha2Response", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(method);
+
+            // Act
+            var response = (byte[])method.Invoke(connection, new object[] { salt });
+
+            // Assert
+            var trimmedSaltLength = salt[^1] == 0 ? salt.Length - 1 : salt.Length;
+            var trimmedSalt = new byte[trimmedSaltLength];
+            Array.Copy(salt, trimmedSalt, trimmedSaltLength);
+
+            using var sha256 = SHA256.Create();
+            var passwordBytes = Encoding.UTF8.GetBytes(password);
+            var sha256Password = sha256.ComputeHash(passwordBytes);
+            var sha256Sha256Password = sha256.ComputeHash(sha256Password);
+            var hashAndSalt = new byte[sha256Sha256Password.Length + trimmedSalt.Length];
+            Array.Copy(sha256Sha256Password, 0, hashAndSalt, 0, sha256Sha256Password.Length);
+            Array.Copy(trimmedSalt, 0, hashAndSalt, sha256Sha256Password.Length, trimmedSalt.Length);
+            var sha256Combined = sha256.ComputeHash(hashAndSalt);
+            var expected = new byte[sha256Password.Length];
+            for (int i = 0; i < expected.Length; i++)
+            {
+                expected[i] = (byte)(sha256Password[i] ^ sha256Combined[i]);
+            }
+
+            Assert.Equal(expected, response);
         }
 
         [Fact]
