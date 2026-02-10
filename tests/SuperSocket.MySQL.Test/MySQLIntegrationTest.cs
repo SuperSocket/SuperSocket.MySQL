@@ -58,6 +58,52 @@ namespace SuperSocket.MySQL.Test
 
         [Fact]
         [Trait("Category", "Integration")]
+        public async Task MySQLConnection_CachingSha2PasswordUser_ShouldAuthenticate()
+        {
+            var userName = $"sha2_user_{Guid.NewGuid():N}";
+            var password = $"sha2_pass_{Guid.NewGuid():N}";
+            var host = TestConst.Host;
+            var adminConnection = new MySQLConnection(host, TestConst.DefaultPort, TestConst.Username, TestConst.Password);
+            MySQLConnection userConnection = null;
+
+            try
+            {
+                await adminConnection.ConnectAsync();
+
+                var pluginResult = await adminConnection.ExecuteQueryAsync(
+                    "SELECT PLUGIN_NAME FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME='caching_sha2_password' AND PLUGIN_STATUS='ACTIVE'");
+
+                if (!pluginResult.IsSuccess || pluginResult.RowCount == 0)
+                    return;
+
+                await adminConnection.ExecuteQueryAsync(
+                    $"CREATE USER '{userName}'@'{host}' IDENTIFIED WITH caching_sha2_password BY '{password}'");
+                await adminConnection.ExecuteQueryAsync($"GRANT USAGE ON *.* TO '{userName}'@'{host}'");
+
+                userConnection = new MySQLConnection(host, TestConst.DefaultPort, userName, password);
+                await userConnection.ConnectAsync();
+
+                Assert.True(userConnection.IsAuthenticated,
+                    "Connection should be authenticated using caching_sha2_password.");
+            }
+            finally
+            {
+                if (userConnection != null)
+                {
+                    await userConnection.DisconnectAsync();
+                }
+
+                if (adminConnection.IsAuthenticated)
+                {
+                    await adminConnection.ExecuteQueryAsync($"DROP USER IF EXISTS '{userName}'@'{host}'");
+                }
+
+                await adminConnection.DisconnectAsync();
+            }
+        }
+
+        [Fact]
+        [Trait("Category", "Integration")]
         public async Task MySQLConnection_ConcurrentConnections_ShouldWork()
         {
             // Arrange
