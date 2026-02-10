@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -210,12 +209,11 @@ namespace SuperSocket.MySQL.Test
             // Arrange
             const string password = "test_password";
             var connection = new MySQLConnection("localhost", 3306, "user", password);
+            // Include a trailing null byte to validate trimming of the salt.
             var salt = new byte[] { 0x33, 0x21, 0x55, 0x42, 0x19, 0x76, 0xA1, 0x0B, 0x10, 0x5C, 0x2D, 0x48, 0x5A, 0x00 };
-            var method = typeof(MySQLConnection).GetMethod("GenerateCachingSha2Response", BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.NotNull(method);
 
             // Act
-            var response = (byte[])method.Invoke(connection, new object[] { salt });
+            var response = connection.GenerateCachingSha2Response(salt);
 
             // Assert
             var trimmedSaltLength = salt[^1] == 0 ? salt.Length - 1 : salt.Length;
