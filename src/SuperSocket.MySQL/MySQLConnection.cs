@@ -199,7 +199,7 @@ namespace SuperSocket.MySQL
             }
         }
 
-        private byte[] GenerateCachingSha2Response(byte[] salt)
+        internal byte[] GenerateCachingSha2Response(byte[] salt)
         {
             if (string.IsNullOrEmpty(_password))
                 return Array.Empty<byte>();
